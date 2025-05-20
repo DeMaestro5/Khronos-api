@@ -20,6 +20,6 @@ export default {
     email: Joi.string().required().email(),
     password: Joi.string().required().min(6),
     profilePicUrl: Joi.string().optional().uri(),
-    role: Joi.string().required().default(RoleCode.CONTENT_CREATOR),
+    role: Joi.string().optional().default(RoleCode.CONTENT_CREATOR),
   }),
 };

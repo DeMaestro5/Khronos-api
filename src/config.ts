@@ -38,6 +38,17 @@ export const caching = {
   ),
 };
 
+export const config = {
+  // ... existing config ...
+  openai: {
+    apiKey: process.env.OPENAI_API_KEY || '',
+  },
+  pinecone: {
+    apiKey: process.env.PINECONE_API_KEY || '',
+  },
+  // ... existing code ...
+};
+
 process.on('unhandledRejection', (reason, promise) => {
   console.log('Unhandled Rejection at:', promise, 'reason:', reason);
 });

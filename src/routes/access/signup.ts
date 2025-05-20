@@ -26,6 +26,9 @@ router.post(
     const refreshTokenKey = crypto.randomBytes(64).toString('hex');
     const passwordHash = await bcrypt.hash(req.body.password, 10);
 
+    // Use role from request body or default to CONTENT_CREATOR
+    const role = req.body.role || RoleCode.CONTENT_CREATOR;
+
     const { user: createdUser, keystore } = await UserRepo.create(
       {
         name: req.body.name,
@@ -35,7 +38,7 @@ router.post(
       } as User,
       accessTokenKey,
       refreshTokenKey,
-      RoleCode.CONTENT_CREATOR,
+      role,
     );
 
     const tokens = await createTokens(
@@ -43,11 +46,13 @@ router.post(
       keystore.primaryKey,
       keystore.secondaryKey,
     );
+
     const userData = await getUserData(createdUser);
 
     new SuccessResponse('Signup Successful', {
       user: userData,
       tokens: tokens,
+      role: role,
     }).send(res);
   }),
 );

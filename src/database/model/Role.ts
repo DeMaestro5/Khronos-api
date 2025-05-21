@@ -1,7 +1,7 @@
 import { Schema, model, Types } from 'mongoose';
 
 export const DOCUMENT_NAME = 'Role';
-export const COLLECTION_NAME = 'roles';
+export const COLLECTION_NAME = 'role';
 
 export enum RoleCode {
   ADMIN = 'ADMIN',

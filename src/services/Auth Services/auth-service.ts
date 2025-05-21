@@ -1,15 +1,15 @@
 import { Types } from 'mongoose';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
-import { BadRequestError, AuthFailureError } from '../core/ApiError';
-import UserRepo from '../database/repository/UserRepo';
-import KeystoreRepo from '../database/repository/KeystoreRepo';
-import { createTokens, validateTokenData } from '../auth/authUtils';
-import { getUserData } from '../routes/access/utils';
-import { RoleCode } from '../database/model/Role';
-import User from '../database/model/User';
-import { Tokens } from '../types/app-request';
-import JWT from '../core/JWT';
+import { BadRequestError, AuthFailureError } from '../../core/ApiError';
+import UserRepo from '../../database/repository/UserRepo';
+import KeystoreRepo from '../../database/repository/KeystoreRepo';
+import { createTokens, validateTokenData } from '../../auth/authUtils';
+import { getUserData } from '../../routes/access/utils';
+import { RoleCode } from '../../database/model/Role';
+import User from '../../database/model/User';
+import { Tokens } from '../../types/app-request';
+import JWT from '../../core/JWT';
 
 export interface SignupData {
   name: string;

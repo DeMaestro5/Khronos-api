@@ -8,7 +8,7 @@ const router = express.Router();
 
 export default router.use(
   asyncHandler(async (req: ProtectedRequest, res, next) => {
-    if (!req.user || !req.user.roles || !req.currentRoleCodes)
+    if (!req.user || !req.user.role || !req.currentRoleCodes)
       throw new AuthFailureError('Permission denied');
 
     const roles = await RoleRepo.findByCodes(req.currentRoleCodes);
@@ -16,7 +16,7 @@ export default router.use(
 
     let authorized = false;
 
-    for (const userRole of req.user.roles) {
+    for (const userRole of req.user.role) {
       if (authorized) break;
       for (const role of roles) {
         if (userRole._id.equals(role._id)) {

@@ -1,4 +1,5 @@
 // Mapper for environment variables
+
 export const environment = process.env.NODE_ENV;
 export const port = process.env.PORT;
 export const timezone = process.env.TZ;
@@ -13,7 +14,6 @@ export const db = {
   maxPoolSize: parseInt(process.env.DB_MAX_POOL_SIZE || '10'),
   uri: process.env.MONGODB_URI || '',
 };
-console.log(port);
 
 export const corsUrl = process.env.CORS_URL;
 
@@ -26,11 +26,11 @@ export const tokenInfo = {
 
 export const logDirectory = process.env.LOG_DIR;
 
-// export const redis = {
-//   host: process.env.REDIS_HOST || '',
-//   port: parseInt(process.env.REDIS_PORT || '0'),
-//   password: process.env.REDIS_PASSWORD || '',
-// };
+export const redis = {
+  host: process.env.REDIS_HOST || '',
+  port: parseInt(process.env.REDIS_PORT || '0'),
+  password: process.env.REDIS_PASSWORD || '',
+};
 
 export const caching = {
   contentCacheDuration: parseInt(
@@ -39,14 +39,15 @@ export const caching = {
 };
 
 export const config = {
-  // ... existing config ...
   openai: {
     apiKey: process.env.OPENAI_API_KEY || '',
   },
   pinecone: {
     apiKey: process.env.PINECONE_API_KEY || '',
   },
-  // ... existing code ...
+  linkup: {
+    apiKey: process.env.LINKUP_API_KEY || '',
+  },
 };
 
 process.on('unhandledRejection', (reason, promise) => {

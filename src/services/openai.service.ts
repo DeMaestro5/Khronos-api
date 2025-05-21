@@ -14,6 +14,8 @@ export interface ContentAnalysis {
 
 export class OpenAIService {
   private openai: OpenAI;
+  // Use a more current model that is likely to be available
+  private model = 'gpt-4.1-mini';
 
   constructor() {
     this.openai = new OpenAI({
@@ -24,7 +26,7 @@ export class OpenAIService {
   async analyzeContent(content: string): Promise<ContentAnalysis> {
     try {
       const response = await this.openai.chat.completions.create({
-        model: 'gpt-4',
+        model: this.model,
         messages: [
           {
             role: 'system',
@@ -58,7 +60,7 @@ export class OpenAIService {
   async generateHashtags(content: string, platform: string): Promise<string[]> {
     try {
       const response = await this.openai.chat.completions.create({
-        model: 'gpt-4',
+        model: this.model,
         messages: [
           {
             role: 'system',
@@ -83,7 +85,7 @@ export class OpenAIService {
   async optimizeHeadline(content: string, platform: string): Promise<string> {
     try {
       const response = await this.openai.chat.completions.create({
-        model: 'gpt-4',
+        model: this.model,
         messages: [
           {
             role: 'system',
@@ -108,7 +110,7 @@ export class OpenAIService {
   ): Promise<string[]> {
     try {
       const response = await this.openai.chat.completions.create({
-        model: 'gpt-4',
+        model: this.model,
         messages: [
           {
             role: 'system',
@@ -135,7 +137,7 @@ export class OpenAIService {
   ): Promise<{ score: number; suggestions: string[] }> {
     try {
       const response = await this.openai.chat.completions.create({
-        model: 'gpt-4',
+        model: this.model,
         messages: [
           {
             role: 'system',

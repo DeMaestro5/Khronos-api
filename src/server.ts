@@ -1,4 +1,3 @@
-console.log('Starting server.ts...');
 import Logger from './core/Logger';
 import { port } from './config';
 import app from './app';

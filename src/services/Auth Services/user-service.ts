@@ -1,8 +1,8 @@
 import { Types } from 'mongoose';
-import { BadRequestError } from '../core/ApiError';
-import UserRepo from '../database/repository/UserRepo';
-import User from '../database/model/User';
-import { getUserData } from '../routes/access/utils';
+import { BadRequestError } from '../../core/ApiError';
+import UserRepo from '../../database/repository/UserRepo';
+import User from '../../database/model/User';
+import { getUserData } from '../../routes/access/utils';
 
 export interface UpdateProfileData {
   name?: string;

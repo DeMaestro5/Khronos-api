@@ -22,4 +22,12 @@ export default {
     profilePicUrl: Joi.string().optional().uri(),
     role: Joi.string().optional().default(RoleCode.CONTENT_CREATOR),
   }),
+
+  forgotPassword: Joi.object().keys({
+    email: Joi.string().required().email(),
+  }),
+  resetPassword: Joi.object().keys({
+    token: Joi.string().required(),
+    password: Joi.string().required().min(8),
+  }),
 };

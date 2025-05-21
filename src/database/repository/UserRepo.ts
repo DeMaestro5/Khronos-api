@@ -16,7 +16,7 @@ async function findPrivateProfileById(
   return UserModel.findOne({ _id: id, status: true })
     .select('+email')
     .populate({
-      path: 'roles',
+      path: 'role',
       match: { status: true },
       select: { code: 1 },
     })
@@ -27,9 +27,9 @@ async function findPrivateProfileById(
 // contains critical information of the user
 async function findById(id: Types.ObjectId): Promise<User | null> {
   return UserModel.findOne({ _id: id, status: true })
-    .select('+email +password +roles')
+    .select('+email +password +role')
     .populate({
-      path: 'roles',
+      path: 'role',
       match: { status: true },
     })
     .lean()
@@ -39,10 +39,10 @@ async function findById(id: Types.ObjectId): Promise<User | null> {
 async function findByEmail(email: string): Promise<User | null> {
   return UserModel.findOne({ email: email })
     .select(
-      '+email +password +roles +gender +dob +grade +country +state +city +school +bio +hobbies',
+      '+email +password +role +gender +dob +grade +country +state +city +school +bio +hobbies',
     )
     .populate({
-      path: 'roles',
+      path: 'role',
       match: { status: true },
       select: { code: 1 },
     })

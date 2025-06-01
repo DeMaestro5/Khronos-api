@@ -75,7 +75,9 @@ export class NotificationService {
         messages: [
           {
             role: 'system',
-            content: `Generate a performance alert for content ID: ${contentId} with metrics: ${JSON.stringify(metrics)} and threshold: ${threshold}`,
+            content: `Generate a performance alert for content ID: ${contentId} with metrics: ${JSON.stringify(
+              metrics,
+            )} and threshold: ${threshold}`,
           },
         ],
         temperature: 0.7,
@@ -187,7 +189,8 @@ export class NotificationService {
       priority?: Notification['priority'];
     },
   ): Promise<Notification[]> {
-    // Add implementation logic to fetch user notifications
+    // Add implementation logic to fetch user notifications4
+    console.log('getUserNotifications', userId, filters);
     return [];
   }
 
@@ -196,6 +199,7 @@ export class NotificationService {
     status: Notification['status'],
   ): Promise<Notification> {
     // Add implementation logic to update notification status
+    console.log('updateNotificationStatus', notificationId, status);
     throw new Error('Not implemented');
   }
 
@@ -204,6 +208,7 @@ export class NotificationService {
     preferences: Partial<NotificationPreferences>,
   ): Promise<NotificationPreferences> {
     // Add implementation logic to update notification preferences
+    console.log('updateNotificationPreferences', userId, preferences);
     throw new Error('Not implemented');
   }
 }

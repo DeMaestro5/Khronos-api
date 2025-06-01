@@ -61,4 +61,8 @@ export default {
     tags: Joi.array().items(Joi.string()),
     scheduledDate: Joi.date().iso(),
   }),
+
+  schedule: Joi.object({
+    scheduledDate: Joi.date().iso().required(),
+  }),
 };

@@ -1,5 +1,4 @@
 import { model, Schema, Types } from 'mongoose';
-import User from './User';
 
 export const DOCUMENT_NAME = 'Content';
 export const COLLECTION_NAME = 'contents';
@@ -20,7 +19,7 @@ export default interface Content {
   title: string;
   description: string;
   type: 'article' | 'video' | 'social' | 'podcast';
-  status: 'draft' | 'scheduled' | 'published';
+  status: 'draft' | 'scheduled' | 'published' | 'archived';
   platform: string[];
   tags: string[];
   engagement?: {
@@ -60,7 +59,7 @@ const schema = new Schema<Content>(
       status: {
         type: Schema.Types.String,
         required: true,
-        enum: ['draft', 'scheduled', 'published'],
+        enum: ['draft', 'scheduled', 'published', 'archived'],
         default: 'draft',
       },
       scheduledDate: {
@@ -99,7 +98,7 @@ const schema = new Schema<Content>(
     status: {
       type: Schema.Types.String,
       required: true,
-      enum: ['draft', 'scheduled', 'published'],
+      enum: ['draft', 'scheduled', 'published', 'archived'],
       default: 'draft',
     },
     platform: [

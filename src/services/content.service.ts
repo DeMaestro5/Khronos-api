@@ -18,7 +18,7 @@ export interface Content {
   title: string;
   description: string;
   type: 'article' | 'video' | 'social' | 'podcast';
-  status: 'draft' | 'scheduled' | 'published';
+  status: 'draft' | 'scheduled' | 'published' | 'archived';
   platform: string[];
   tags: string[];
   engagement?: {
@@ -117,11 +117,85 @@ export class ContentService {
   ): Promise<Content['engagement']> {
     // Implement engagement analysis logic here
     // This could involve fetching data from social media APIs
+    console.log(`Analyzing engagement for content: ${contentId}`);
     return {
       likes: 0,
       shares: 0,
       comments: 0,
       views: 0,
     };
+  }
+
+  /**
+   * Get detailed analytics for a specific content
+   */
+  async getContentAnalytics(contentId: Types.ObjectId): Promise<{
+    engagement: Content['engagement'];
+    performance: {
+      reach: number;
+      impressions: number;
+      clickThroughRate: number;
+      averageTimeOnPage: number;
+    };
+    demographics: {
+      ageGroups: Record<string, number>;
+      locations: Record<string, number>;
+      devices: Record<string, number>;
+    };
+    trends: {
+      dailyEngagement: Array<{ date: string; value: number }>;
+      topReferrers: Array<{ source: string; count: number }>;
+    };
+  }> {
+    try {
+      // Get basic engagement metrics
+      const engagement = await this.analyzeEngagement(contentId);
+
+      // In a real implementation, this would fetch data from analytics providers
+      // For now, return mock data
+      return {
+        engagement,
+        performance: {
+          reach: 1000,
+          impressions: 5000,
+          clickThroughRate: 0.15,
+          averageTimeOnPage: 120,
+        },
+        demographics: {
+          ageGroups: {
+            '18-24': 30,
+            '25-34': 40,
+            '35-44': 20,
+            '45+': 10,
+          },
+          locations: {
+            'United States': 60,
+            'United Kingdom': 20,
+            Canada: 10,
+            Other: 10,
+          },
+          devices: {
+            Mobile: 70,
+            Desktop: 25,
+            Tablet: 5,
+          },
+        },
+        trends: {
+          dailyEngagement: [
+            { date: '2024-03-01', value: 100 },
+            { date: '2024-03-02', value: 150 },
+            { date: '2024-03-03', value: 200 },
+          ],
+          topReferrers: [
+            { source: 'Direct', count: 500 },
+            { source: 'Social Media', count: 300 },
+            { source: 'Search', count: 200 },
+          ],
+        },
+      };
+    } catch (error) {
+      console.error('Error getting content analytics:', error);
+      throw new Error('Failed to get content analytics');
+    }
   }
 }

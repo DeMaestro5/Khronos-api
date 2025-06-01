@@ -43,12 +43,16 @@ export class TrendService {
         messages: [
           {
             role: 'system',
-            content: `Analyze current trends for ${platform}${category ? ` in ${category}` : ''} and provide detailed insights.`,
+            content: `Analyze current trends for ${platform}${
+              category ? ` in ${category}` : ''
+            } and provide detailed insights.`,
           },
         ],
         temperature: 0.7,
         max_tokens: 1000,
       });
+
+      console.log('analyzeTrends', response);
 
       // Parse and structure the response
       const analysis: TrendAnalysis = {
@@ -84,6 +88,8 @@ export class TrendService {
         max_tokens: 500,
       });
 
+      console.log('predictTrendGrowth', response);
+
       return {
         predictedGrowth: 0,
         confidence: 0,
@@ -108,6 +114,8 @@ export class TrendService {
         temperature: 0.7,
         max_tokens: 500,
       });
+
+      console.log('getRelatedTrends', response);
 
       return [];
     } catch (error) {
@@ -137,6 +145,8 @@ export class TrendService {
         temperature: 0.7,
         max_tokens: 1000,
       });
+
+      console.log('generateTrendReport', response);
 
       return {
         summary: '',

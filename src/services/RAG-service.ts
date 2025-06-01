@@ -7,6 +7,7 @@ import { config } from '../config';
 import Logger from '../core/Logger';
 import { Content } from './content.service';
 import { AnalyticsMetrics } from './analytics.service';
+import { Types } from 'mongoose';
 
 class RAGService {
   private readonly pinecone: Pinecone;
@@ -281,6 +282,46 @@ class RAGService {
     } catch (error) {
       Logger.error(
         `Failed to analyze content patterns for ${platform} ${contentType}`,
+        error,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Get version history for a specific content
+   */
+  async getContentVersions(contentId: Types.ObjectId): Promise<Document[]> {
+    try {
+      const index = this.pinecone.index(this.indexName);
+      const vectorStore = await PineconeStore.fromExistingIndex(
+        this.embeddings,
+        {
+          pineconeIndex: index,
+          namespace: `content-${contentId.toString()}`,
+          textKey: 'text',
+        },
+      );
+
+      // Query for all versions of the content
+      const results = await vectorStore.similaritySearch(
+        'content version history',
+        10,
+        {
+          contentId: contentId.toString(),
+          dataType: { $in: ['description', 'metadata'] },
+        },
+      );
+
+      // Sort by timestamp if available
+      return results.sort((a, b) => {
+        const timestampA = a.metadata.timestamp || 0;
+        const timestampB = b.metadata.timestamp || 0;
+        return timestampB - timestampA;
+      });
+    } catch (error) {
+      Logger.error(
+        `Failed to get content versions for content ${contentId}`,
         error,
       );
       throw error;

@@ -37,6 +37,8 @@ export class OpenAIService {
         max_tokens: 1000,
       });
 
+      console.log('analyzeContent', response);
+
       // Parse and structure the response
       const analysis: ContentAnalysis = {
         sentiment: 'neutral',
@@ -147,6 +149,8 @@ export class OpenAIService {
         temperature: 0.7,
         max_tokens: 500,
       });
+
+      console.log('analyzeAudienceEngagement', response);
 
       // Parse and structure the response
       return {

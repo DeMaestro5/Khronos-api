@@ -80,7 +80,6 @@ router.get(
 
 router.get(
   '/:id',
-  validator(schema.id),
   asyncHandler(async (req: ProtectedRequest, res: Response) => {
     const content = await ContentRepo.findById(
       new Types.ObjectId(req.params.id),
@@ -263,6 +262,167 @@ router.get(
     new SuccessResponse(
       'Content patterns analyzed successfully',
       patterns,
+    ).send(res);
+  }),
+);
+
+router.post(
+  '/:id/publish',
+  validator(schema.id),
+  asyncHandler(async (req: ProtectedRequest, res: Response) => {
+    const content = await ContentRepo.findById(
+      new Types.ObjectId(req.params.id),
+    );
+    if (!content) throw new NotFoundError('Content not found');
+    if (content.userId.toString() !== req.user._id.toString())
+      throw new BadRequestError('Not authorized to publish this content');
+
+    const updatedContent = await ContentRepo.update({
+      ...content,
+      metadata: {
+        ...content.metadata,
+        status: 'published',
+        publishedDate: new Date(),
+      },
+      status: 'published',
+    } as any);
+
+    new SuccessResponse('Content published successfully', updatedContent).send(
+      res,
+    );
+  }),
+);
+
+router.post(
+  '/:id/unpublish',
+  validator(schema.id),
+  asyncHandler(async (req: ProtectedRequest, res: Response) => {
+    const content = await ContentRepo.findById(
+      new Types.ObjectId(req.params.id),
+    );
+    if (!content) throw new NotFoundError('Content not found');
+    if (content.userId.toString() !== req.user._id.toString())
+      throw new BadRequestError('Not authorized to unpublish this content');
+
+    const updatedContent = await ContentRepo.update({
+      ...content,
+      metadata: {
+        ...content.metadata,
+        status: 'draft',
+      },
+      status: 'draft',
+    } as any);
+
+    new SuccessResponse(
+      'Content unpublished successfully',
+      updatedContent,
+    ).send(res);
+  }),
+);
+
+router.post(
+  '/:id/schedule',
+  validator(schema.id),
+  asyncHandler(async (req: ProtectedRequest, res: Response) => {
+    const { scheduledDate } = req.body;
+    if (!scheduledDate) throw new BadRequestError('Scheduled date is required');
+
+    const content = await ContentRepo.findById(
+      new Types.ObjectId(req.params.id),
+    );
+    if (!content) throw new NotFoundError('Content not found');
+    if (content.userId.toString() !== req.user._id.toString())
+      throw new BadRequestError('Not authorized to schedule this content');
+
+    const updatedContent = await ContentRepo.update({
+      ...content,
+      metadata: {
+        ...content.metadata,
+        status: 'scheduled',
+        scheduledDate: new Date(scheduledDate),
+      },
+      status: 'scheduled',
+    } as any);
+
+    new SuccessResponse('Content scheduled successfully', updatedContent).send(
+      res,
+    );
+  }),
+);
+
+router.post(
+  '/:id/duplicate',
+  validator(schema.id),
+  asyncHandler(async (req: ProtectedRequest, res: Response) => {
+    const content = await ContentRepo.findById(
+      new Types.ObjectId(req.params.id),
+    );
+    if (!content) throw new NotFoundError('Content not found');
+    if (content.userId.toString() !== req.user._id.toString())
+      throw new BadRequestError('Not authorized to duplicate this content');
+
+    const duplicatedContent = await ContentRepo.create({
+      userId: req.user._id,
+      metadata: {
+        ...content.metadata,
+        title: `${content.metadata.title} (Copy)`,
+        status: 'draft',
+      },
+      title: `${content.title} (Copy)`,
+      description: content.description,
+      type: content.type,
+      status: 'draft',
+      platform: content.platform,
+      tags: content.tags,
+    } as any);
+
+    new SuccessResponse(
+      'Content duplicated successfully',
+      duplicatedContent,
+    ).send(res);
+  }),
+);
+
+router.get(
+  '/:id/versions',
+  validator(schema.id),
+  asyncHandler(async (req: ProtectedRequest, res: Response) => {
+    const content = await ContentRepo.findById(
+      new Types.ObjectId(req.params.id),
+    );
+    if (!content) throw new NotFoundError('Content not found');
+    if (content.userId.toString() !== req.user._id.toString())
+      throw new BadRequestError(
+        'Not authorized to view versions of this content',
+      );
+
+    // Get version history from RAG service
+    const versions = await RAGService.getContentVersions(content._id);
+    new SuccessResponse(
+      'Content versions retrieved successfully',
+      versions,
+    ).send(res);
+  }),
+);
+
+router.get(
+  '/:id/analytics',
+  validator(schema.id),
+  asyncHandler(async (req: ProtectedRequest, res: Response) => {
+    const content = await ContentRepo.findById(
+      new Types.ObjectId(req.params.id),
+    );
+    if (!content) throw new NotFoundError('Content not found');
+    if (content.userId.toString() !== req.user._id.toString())
+      throw new BadRequestError(
+        'Not authorized to view analytics of this content',
+      );
+
+    // Get analytics from content service
+    const analytics = await contentService.getContentAnalytics(content._id);
+    new SuccessResponse(
+      'Content analytics retrieved successfully',
+      analytics,
     ).send(res);
   }),
 );

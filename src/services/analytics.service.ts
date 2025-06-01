@@ -63,6 +63,8 @@ export class AnalyticsService {
         max_tokens: 1000,
       });
 
+      console.log('analyzeContentPerformance', response);
+
       // Parse and structure the response
       const performance: ContentPerformance = {
         _id: new Types.ObjectId(),
@@ -122,6 +124,8 @@ export class AnalyticsService {
         max_tokens: 1000,
       });
 
+      console.log('generatePerformanceReport', response);
+
       return {
         summary: '',
         topPerforming: [],
@@ -154,6 +158,8 @@ export class AnalyticsService {
         temperature: 0.7,
         max_tokens: 500,
       });
+
+      console.log('predictContentPerformance', response);
 
       return {
         predictedMetrics: {
@@ -190,12 +196,16 @@ export class AnalyticsService {
         messages: [
           {
             role: 'system',
-            content: `Compare performance for content IDs: ${contentIds.join(', ')} on ${platform} from ${period.start.toISOString()} to ${period.end.toISOString()}`,
+            content: `Compare performance for content IDs: ${contentIds.join(
+              ', ',
+            )} on ${platform} from ${period.start.toISOString()} to ${period.end.toISOString()}`,
           },
         ],
         temperature: 0.7,
         max_tokens: 1000,
       });
+
+      console.log('compareContentPerformance', response);
 
       return {
         comparison: {},

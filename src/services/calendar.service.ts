@@ -37,6 +37,7 @@ export class CalendarService {
 
     const timeSlots: TimeSlot[] = [];
     // Add implementation logic here
+    console.log('findOptimalPostingTime', content, platform, dateRange);
 
     return timeSlots;
   }
@@ -64,6 +65,7 @@ export class CalendarService {
     scheduleId: Types.ObjectId,
   ): Promise<Schedule['analytics']> {
     // Implement analytics logic to measure schedule performance
+    console.log('analyzeSchedulePerformance', scheduleId);
     return {
       reach: 0,
       engagement: 0,
@@ -76,6 +78,7 @@ export class CalendarService {
     newTime: Date,
   ): Promise<Schedule> {
     // Implement schedule adjustment logic
+    console.log('adjustSchedule', scheduleId, newTime);
     throw new Error('Not implemented');
   }
 
@@ -84,6 +87,7 @@ export class CalendarService {
     endDate: Date,
   ): Promise<Schedule[]> {
     // Implement logic to fetch upcoming schedule
+    console.log('getUpcomingSchedule', startDate, endDate);
     return [];
   }
 
@@ -92,6 +96,7 @@ export class CalendarService {
     dateRange: { start: Date; end: Date },
   ): Promise<Schedule[]> {
     // Implement logic to check for scheduling conflicts
+    console.log('getScheduleConflicts', platform, dateRange);
     return [];
   }
 }

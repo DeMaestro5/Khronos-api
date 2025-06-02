@@ -1,6 +1,5 @@
 import Joi from 'joi';
 import { JoiAuthBearer } from '../../helpers/validator';
-import { RoleCode } from '../../database/model/Role';
 
 export default {
   credential: Joi.object().keys({
@@ -16,11 +15,12 @@ export default {
     })
     .unknown(true),
   signup: Joi.object().keys({
-    name: Joi.string().required().min(3),
+    firstName: Joi.string().required().min(1),
+    lastName: Joi.string().required().min(1),
     email: Joi.string().required().email(),
     password: Joi.string().required().min(6),
     profilePicUrl: Joi.string().optional().uri(),
-    role: Joi.string().optional().default(RoleCode.CONTENT_CREATOR),
+    role: Joi.string().optional(),
   }),
 
   forgotPassword: Joi.object().keys({

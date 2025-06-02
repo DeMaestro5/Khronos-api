@@ -4,7 +4,7 @@ import { RoleRequest } from 'app-request';
 import validator from '../../helpers/validator';
 import schema from './schema';
 import asyncHandler from '../../helpers/asyncHandler';
-import { RoleCode } from '../../database/model/Role';
+import { UserRole } from '../../database/model/User';
 import AuthService from '../../services/Auth Services/auth-service';
 
 const router = express.Router();
@@ -13,18 +13,17 @@ router.post(
   '/',
   validator(schema.signup),
   asyncHandler(async (req: RoleRequest, res) => {
-    const { user, tokens, role } = await AuthService.signup({
-      name: req.body.name,
+    const { user, tokens } = await AuthService.signup({
+      name: `${req.body.firstName} ${req.body.lastName}`,
       email: req.body.email,
       password: req.body.password,
       profilePicUrl: req.body.profilePicUrl,
-      role: req.body.role || RoleCode.CONTENT_CREATOR,
+      role: req.body.role || UserRole.CONTENT_CREATOR,
     });
 
     new SuccessResponse('Signup Successful', {
       user,
       tokens,
-      role,
     }).send(res);
   }),
 );

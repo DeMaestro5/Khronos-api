@@ -23,6 +23,14 @@ app.use(
   express.urlencoded({ limit: '10mb', extended: true, parameterLimit: 50000 }),
 );
 
+// Add this middleware before your routes to log all requests
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.originalUrl}`);
+  console.log('Headers:', req.headers);
+  console.log('Body:', req.body);
+  next();
+});
+
 // Updated CORS configuration to handle Next.js properly
 const corsOptions = {
   origin: function (
@@ -35,8 +43,8 @@ const corsOptions = {
     // In development, be more permissive with localhost
     if (environment === 'development') {
       const developmentOrigins = [
-        'http://localhost:3001',
-        'http://127.0.0.1:3001',
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
         corsUrl,
       ].filter(Boolean);
 
@@ -70,6 +78,7 @@ const corsOptions = {
     'Authorization',
     'Cache-Control',
     'Pragma',
+    'x-api-key',
   ],
 };
 

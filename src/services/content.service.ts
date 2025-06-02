@@ -33,8 +33,8 @@ export interface Content {
 
 export class ContentService {
   private openai: OpenAI;
-  // Use a more current model that is likely to be available
-  private model = 'gpt-4.1-mini';
+  // Use a valid model name
+  private model = 'gpt-3.5-turbo';
 
   constructor() {
     this.openai = new OpenAI({
@@ -93,22 +93,43 @@ export class ContentService {
 
   async optimizeContent(content: string, platform: string): Promise<string> {
     try {
+      if (!content) {
+        console.warn('No content provided for optimization');
+        return '';
+      }
+
+      if (!platform) {
+        console.warn('No platform specified for optimization');
+        return content;
+      }
+
       const response = await this.openai.chat.completions.create({
         model: this.model,
         messages: [
           {
             role: 'system',
-            content: `Optimize this content for ${platform}: ${content}`,
+            content: `You are a content optimization expert. Optimize the following content for ${platform}. Maintain the original message but make it more engaging and platform-appropriate.`,
+          },
+          {
+            role: 'user',
+            content: content,
           },
         ],
         temperature: 0.7,
         max_tokens: 1000,
       });
 
-      return response.choices[0].message.content || content;
+      const optimizedContent = response.choices[0]?.message?.content;
+      if (!optimizedContent) {
+        console.warn('No optimized content received from OpenAI');
+        return content;
+      }
+
+      return optimizedContent;
     } catch (error) {
       console.error('Error optimizing content:', error);
-      throw new Error('Failed to optimize content');
+      // Return original content instead of throwing error
+      return content;
     }
   }
 

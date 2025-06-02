@@ -79,6 +79,15 @@ router.get(
 );
 
 router.get(
+  '/tags',
+  validator(schema.tags),
+  asyncHandler(async (req: ProtectedRequest, res: Response) => {
+    const contents = await ContentRepo.findByTags(req.body.tags);
+    new SuccessResponse('Contents retrieved successfully', contents).send(res);
+  }),
+);
+
+router.get(
   '/:id',
   asyncHandler(async (req: ProtectedRequest, res: Response) => {
     const content = await ContentRepo.findById(
@@ -96,7 +105,6 @@ router.get(
 
 router.get(
   '/user/:userId',
-  validator(schema.userId),
   asyncHandler(async (req: ProtectedRequest, res: Response) => {
     const contents = await ContentRepo.findByUserId(
       new Types.ObjectId(req.params.userId),
@@ -107,7 +115,6 @@ router.get(
 
 router.get(
   '/type/:type',
-  validator(schema.type),
   asyncHandler(async (req: ProtectedRequest, res: Response) => {
     const contents = await ContentRepo.findByType(
       req.params.type as Content['type'],
@@ -118,18 +125,9 @@ router.get(
 
 router.get(
   '/platform/:platform',
-  validator(schema.platform),
   asyncHandler(async (req: ProtectedRequest, res: Response) => {
     const contents = await ContentRepo.findByPlatform(req.params.platform);
-    new SuccessResponse('Contents retrieved successfully', contents).send(res);
-  }),
-);
-
-router.get(
-  '/tags',
-  validator(schema.tags),
-  asyncHandler(async (req: ProtectedRequest, res: Response) => {
-    const contents = await ContentRepo.findByTags(req.body.tags);
+    if (contents.length === 0) throw new NotFoundError('Contents not found');
     new SuccessResponse('Contents retrieved successfully', contents).send(res);
   }),
 );
@@ -141,8 +139,16 @@ router.put(
     const content = await ContentRepo.findById(
       new Types.ObjectId(req.params.id),
     );
+    console.log('content?.userId', content?.userId);
+    console.log('req.user._id', req.user._id);
+    console.log('content?.userId type:', typeof content?.userId);
+    console.log('req.user._id type:', typeof req.user._id);
+    console.log('content?.userId.toString()', content?.userId?.toString());
+    console.log('req.user._id.toString()', req.user._id?.toString());
     if (!content) throw new NotFoundError('Content not found');
-    if (content.userId.toString() !== req.user._id.toString())
+
+    // Compare the _id from the populated user object
+    if (content.userId._id.toString() !== req.user._id.toString())
       throw new BadRequestError('Not authorized to update this content');
 
     const { title, description, type, platform, tags } = req.body;
@@ -189,7 +195,7 @@ router.put(
       new Types.ObjectId(req.params.id),
     );
     if (!content) throw new NotFoundError('Content not found');
-    if (content.userId.toString() !== req.user._id.toString())
+    if (content.userId._id.toString() !== req.user._id.toString())
       throw new BadRequestError('Not authorized to update this content');
 
     await ContentRepo.updateStatus(
@@ -218,7 +224,6 @@ router.delete(
 
 router.get(
   '/:id/similar',
-  validator(schema.id),
   asyncHandler(async (req: ProtectedRequest, res: Response) => {
     const content = await ContentRepo.findById(
       new Types.ObjectId(req.params.id),

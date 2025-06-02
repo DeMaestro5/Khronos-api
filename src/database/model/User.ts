@@ -1,8 +1,12 @@
 import { model, Schema, Types } from 'mongoose';
-import Role from './Role';
 
 export const DOCUMENT_NAME = 'User';
 export const COLLECTION_NAME = 'users';
+
+export enum UserRole {
+  ADMIN = 'ADMIN',
+  CONTENT_CREATOR = 'CONTENT_CREATOR',
+}
 
 export default interface User {
   _id: Types.ObjectId;
@@ -10,7 +14,7 @@ export default interface User {
   profilePicUrl?: string;
   email?: string;
   password?: string;
-  role: Role[];
+  role: string;
   verified?: boolean;
   status?: boolean;
   resetPasswordToken?: string;
@@ -42,13 +46,10 @@ const schema = new Schema<User>(
       select: false,
     },
     role: {
-      type: [
-        {
-          type: Schema.Types.ObjectId,
-          ref: 'Role',
-        },
-      ],
+      type: Schema.Types.String,
       required: true,
+      enum: Object.values(UserRole),
+      default: UserRole.CONTENT_CREATOR,
     },
     verified: {
       type: Schema.Types.Boolean,

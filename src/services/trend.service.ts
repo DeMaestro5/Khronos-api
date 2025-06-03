@@ -1,6 +1,5 @@
 import { Types } from 'mongoose';
-import { OpenAI } from 'openai';
-import { config } from '../config';
+import { UnifiedLLMService, LLMProvider } from './llm.service';
 
 export interface Trend {
   _id: Types.ObjectId;
@@ -25,12 +24,11 @@ export interface TrendAnalysis {
 }
 
 export class TrendService {
-  private openai: OpenAI;
+  private llmService: UnifiedLLMService;
 
   constructor() {
-    this.openai = new OpenAI({
-      apiKey: config.openai.apiKey,
-    });
+    // Initialize with Gemini as primary provider (free model)
+    this.llmService = new UnifiedLLMService(LLMProvider.GEMINI);
   }
 
   async analyzeTrends(
@@ -38,21 +36,12 @@ export class TrendService {
     category?: string,
   ): Promise<TrendAnalysis> {
     try {
-      const response = await this.openai.chat.completions.create({
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'system',
-            content: `Analyze current trends for ${platform}${
-              category ? ` in ${category}` : ''
-            } and provide detailed insights.`,
-          },
-        ],
-        temperature: 0.7,
-        max_tokens: 1000,
-      });
+      const analysisText = await this.llmService.analyzeTrends(
+        platform,
+        category,
+      );
 
-      console.log('analyzeTrends', response);
+      console.log('analyzeTrends', analysisText);
 
       // Parse and structure the response
       const analysis: TrendAnalysis = {
@@ -76,19 +65,12 @@ export class TrendService {
     timeframe: string;
   }> {
     try {
-      const response = await this.openai.chat.completions.create({
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'system',
-            content: `Predict growth for trend: ${trend.keyword} on ${trend.platform}`,
-          },
-        ],
-        temperature: 0.7,
-        max_tokens: 500,
-      });
+      const predictionText = await this.llmService.predictTrendGrowth(
+        trend.keyword,
+        trend.platform,
+      );
 
-      console.log('predictTrendGrowth', response);
+      console.log('predictTrendGrowth', predictionText);
 
       return {
         predictedGrowth: 0,
@@ -103,19 +85,12 @@ export class TrendService {
 
   async getRelatedTrends(trend: Trend): Promise<Trend[]> {
     try {
-      const response = await this.openai.chat.completions.create({
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'system',
-            content: `Find related trends for: ${trend.keyword} on ${trend.platform}`,
-          },
-        ],
-        temperature: 0.7,
-        max_tokens: 500,
-      });
+      const relatedText = await this.llmService.getRelatedTrends(
+        trend.keyword,
+        trend.platform,
+      );
 
-      console.log('getRelatedTrends', response);
+      console.log('getRelatedTrends', relatedText);
 
       return [];
     } catch (error) {
@@ -134,22 +109,15 @@ export class TrendService {
     recommendations: string[];
   }> {
     try {
-      const response = await this.openai.chat.completions.create({
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'system',
-            content: `Generate a trend report for ${platform} from ${dateRange.start.toISOString()} to ${dateRange.end.toISOString()}`,
-          },
-        ],
-        temperature: 0.7,
-        max_tokens: 1000,
-      });
+      const reportText = await this.llmService.generateTrendReport(
+        platform,
+        dateRange,
+      );
 
-      console.log('generateTrendReport', response);
+      console.log('generateTrendReport', reportText);
 
       return {
-        summary: '',
+        summary: reportText,
         topTrends: [],
         insights: [],
         recommendations: [],

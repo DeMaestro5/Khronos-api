@@ -11,6 +11,7 @@ import profile from './profile';
 import forgotPassword from './access/forgot-password';
 import resetPassword from './access/reset-password';
 import content from './content';
+import llm from './llm';
 
 const router = express.Router();
 
@@ -29,5 +30,6 @@ router.use('/api/v1/profile', profile);
 router.use('/api/v1/forgot-password', forgotPassword);
 router.use('/api/v1/reset-password', resetPassword);
 router.use('/api/v1/content', content);
+router.use('/api/v1/llm', llm);
 
 export default router;

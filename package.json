@@ -25,6 +25,8 @@
   "author": "Janishar Ali",
   "license": "Apache-2.0",
   "dependencies": {
+    "@google/genai": "^1.3.0",
+    "@google/generative-ai": "^0.24.1",
     "@langchain/core": "^0.3.56",
     "@langchain/openai": "^0.5.10",
     "@langchain/pinecone": "^0.2.0",

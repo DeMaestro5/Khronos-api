@@ -1,6 +1,5 @@
 import { Types } from 'mongoose';
-import { OpenAI } from 'openai';
-import { config } from '../config';
+import { UnifiedLLMService, LLMProvider } from './llm.service';
 
 export interface Notification {
   _id: Types.ObjectId;
@@ -31,12 +30,11 @@ export interface NotificationPreferences {
 }
 
 export class NotificationService {
-  private openai: OpenAI;
+  private llmService: UnifiedLLMService;
 
   constructor() {
-    this.openai = new OpenAI({
-      apiKey: config.openai.apiKey,
-    });
+    // Initialize with Gemini as primary provider (free model)
+    this.llmService = new UnifiedLLMService(LLMProvider.GEMINI);
   }
 
   async createNotification(
@@ -70,21 +68,11 @@ export class NotificationService {
     threshold: number,
   ): Promise<Notification> {
     try {
-      const response = await this.openai.chat.completions.create({
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'system',
-            content: `Generate a performance alert for content ID: ${contentId} with metrics: ${JSON.stringify(
-              metrics,
-            )} and threshold: ${threshold}`,
-          },
-        ],
-        temperature: 0.7,
-        max_tokens: 200,
-      });
-
-      const alert = response.choices[0].message.content || 'Performance alert';
+      const alert = await this.llmService.generatePerformanceAlert(
+        contentId.toString(),
+        metrics,
+        threshold,
+      );
 
       return {
         _id: new Types.ObjectId(),
@@ -110,19 +98,11 @@ export class NotificationService {
     growth: number,
   ): Promise<Notification> {
     try {
-      const response = await this.openai.chat.completions.create({
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'system',
-            content: `Generate a trend alert for trend: ${trend} on ${platform} with growth: ${growth}`,
-          },
-        ],
-        temperature: 0.7,
-        max_tokens: 200,
-      });
-
-      const alert = response.choices[0].message.content || 'Trend alert';
+      const alert = await this.llmService.generateTrendAlert(
+        trend,
+        platform,
+        growth,
+      );
 
       return {
         _id: new Types.ObjectId(),
@@ -148,20 +128,11 @@ export class NotificationService {
     platform: string,
   ): Promise<Notification> {
     try {
-      const response = await this.openai.chat.completions.create({
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'system',
-            content: `Generate a schedule reminder for content ID: ${contentId} scheduled for ${scheduledTime.toISOString()} on ${platform}`,
-          },
-        ],
-        temperature: 0.7,
-        max_tokens: 200,
-      });
-
-      const reminder =
-        response.choices[0].message.content || 'Schedule reminder';
+      const reminder = await this.llmService.generateScheduleReminder(
+        contentId.toString(),
+        scheduledTime,
+        platform,
+      );
 
       return {
         _id: new Types.ObjectId(),

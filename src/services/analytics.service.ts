@@ -1,6 +1,5 @@
 import { Types } from 'mongoose';
-import { OpenAI } from 'openai';
-import { config } from '../config';
+import { UnifiedLLMService, LLMProvider } from './llm.service';
 
 export interface AnalyticsMetrics {
   reach: number;
@@ -37,12 +36,11 @@ export interface ContentPerformance {
 }
 
 export class AnalyticsService {
-  private openai: OpenAI;
+  private llmService: UnifiedLLMService;
 
   constructor() {
-    this.openai = new OpenAI({
-      apiKey: config.openai.apiKey,
-    });
+    // Initialize with Gemini as primary provider (free model)
+    this.llmService = new UnifiedLLMService(LLMProvider.GEMINI);
   }
 
   async analyzeContentPerformance(
@@ -51,19 +49,13 @@ export class AnalyticsService {
     period: { start: Date; end: Date },
   ): Promise<ContentPerformance> {
     try {
-      const response = await this.openai.chat.completions.create({
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'system',
-            content: `Analyze content performance for content ID: ${contentId} on ${platform} from ${period.start.toISOString()} to ${period.end.toISOString()}`,
-          },
-        ],
-        temperature: 0.7,
-        max_tokens: 1000,
-      });
+      const analysisText = await this.llmService.analyzeContentPerformance(
+        contentId.toString(),
+        platform,
+        period,
+      );
 
-      console.log('analyzeContentPerformance', response);
+      console.log('analyzeContentPerformance', analysisText);
 
       // Parse and structure the response
       const performance: ContentPerformance = {
@@ -112,22 +104,15 @@ export class AnalyticsService {
     recommendations: string[];
   }> {
     try {
-      const response = await this.openai.chat.completions.create({
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'system',
-            content: `Generate a performance report for ${platform} from ${dateRange.start.toISOString()} to ${dateRange.end.toISOString()}`,
-          },
-        ],
-        temperature: 0.7,
-        max_tokens: 1000,
-      });
+      const reportText = await this.llmService.generatePerformanceReport(
+        platform,
+        dateRange,
+      );
 
-      console.log('generatePerformanceReport', response);
+      console.log('generatePerformanceReport', reportText);
 
       return {
-        summary: '',
+        summary: reportText,
         topPerforming: [],
         insights: [],
         recommendations: [],
@@ -147,19 +132,12 @@ export class AnalyticsService {
     suggestions: string[];
   }> {
     try {
-      const response = await this.openai.chat.completions.create({
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'system',
-            content: `Predict performance for content on ${platform}: ${content}`,
-          },
-        ],
-        temperature: 0.7,
-        max_tokens: 500,
-      });
+      const predictionText = await this.llmService.predictContentPerformance(
+        content,
+        platform,
+      );
 
-      console.log('predictContentPerformance', response);
+      console.log('predictContentPerformance', predictionText);
 
       return {
         predictedMetrics: {
@@ -191,21 +169,13 @@ export class AnalyticsService {
     recommendations: string[];
   }> {
     try {
-      const response = await this.openai.chat.completions.create({
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'system',
-            content: `Compare performance for content IDs: ${contentIds.join(
-              ', ',
-            )} on ${platform} from ${period.start.toISOString()} to ${period.end.toISOString()}`,
-          },
-        ],
-        temperature: 0.7,
-        max_tokens: 1000,
-      });
+      const comparisonText = await this.llmService.compareContentPerformance(
+        contentIds.map((id) => id.toString()),
+        platform,
+        period,
+      );
 
-      console.log('compareContentPerformance', response);
+      console.log('compareContentPerformance', comparisonText);
 
       return {
         comparison: {},

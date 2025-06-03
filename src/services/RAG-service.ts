@@ -1,5 +1,6 @@
 import { Document } from '@langchain/core/documents';
-import { OpenAIEmbeddings } from '@langchain/openai';
+import { UnifiedLangChainEmbeddings } from './unified-langchain-embeddings';
+import { EmbeddingProvider } from './embeddings.service';
 import { PineconeStore } from '@langchain/pinecone';
 import { Pinecone } from '@pinecone-database/pinecone';
 import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
@@ -11,16 +12,17 @@ import { Types } from 'mongoose';
 
 class RAGService {
   private readonly pinecone: Pinecone;
-  private readonly embeddings: OpenAIEmbeddings;
-  private readonly indexName: string;
+  private readonly embeddings: UnifiedLangChainEmbeddings;
+  private readonly baseIndexName: string;
   private readonly textSplitter: RecursiveCharacterTextSplitter;
 
   constructor() {
     this.pinecone = new Pinecone({
       apiKey: config.pinecone.apiKey || '',
     });
-    this.embeddings = new OpenAIEmbeddings();
-    this.indexName = 'content-management-knowledge';
+    // Use Google as primary provider for embeddings (free)
+    this.embeddings = new UnifiedLangChainEmbeddings(EmbeddingProvider.GOOGLE);
+    this.baseIndexName = 'content-management-knowledge';
     this.textSplitter = new RecursiveCharacterTextSplitter({
       chunkSize: 1000,
       chunkOverlap: 200,
@@ -29,15 +31,38 @@ class RAGService {
     this.initialize();
   }
 
+  private getIndexName(): string {
+    const providerStatus = this.embeddings.getProviderStatus();
+    const provider = providerStatus.primary;
+    return `${this.baseIndexName}-${provider}`;
+  }
+
+  private getEmbeddingDimension(): number {
+    const providerStatus = this.embeddings.getProviderStatus();
+    const provider = providerStatus.primary;
+
+    // Return appropriate dimensions for each provider
+    switch (provider) {
+      case EmbeddingProvider.OPENAI:
+        return 1536;
+      case EmbeddingProvider.GOOGLE:
+        return 3072; // Google's gemini-embedding-exp-03-07 dimension
+      default:
+        return 1536; // Default fallback
+    }
+  }
+
   private async initialize(): Promise<void> {
     try {
-      // Check if index exists, if not create it
+      // Check if index exists for current provider, if not create it
+      const indexName = this.getIndexName();
+      const dimension = this.getEmbeddingDimension();
       const indexList = await this.pinecone.listIndexes();
 
-      if (!indexList.indexes?.some((index) => index.name === this.indexName)) {
+      if (!indexList.indexes?.some((index) => index.name === indexName)) {
         await this.pinecone.createIndex({
-          name: this.indexName,
-          dimension: 1536, // OpenAI embeddings dimension
+          name: indexName,
+          dimension: dimension,
           metric: 'cosine',
           spec: {
             serverless: {
@@ -46,10 +71,53 @@ class RAGService {
             },
           },
         });
-        Logger.info(`Created new Pinecone index: ${this.indexName}`);
+        Logger.info(
+          `Created new Pinecone index: ${indexName} with dimension ${dimension}`,
+        );
+      } else {
+        Logger.info(`Using existing Pinecone index: ${indexName}`);
       }
     } catch (error) {
       Logger.error('Failed to initialize Pinecone', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Ensure the correct index exists for the current embedding provider
+   */
+  private async ensureCorrectIndex(): Promise<void> {
+    const currentIndexName = this.getIndexName();
+    const currentDimension = this.getEmbeddingDimension();
+
+    try {
+      const indexList = await this.pinecone.listIndexes();
+      const indexExists = indexList.indexes?.some(
+        (index) => index.name === currentIndexName,
+      );
+
+      if (!indexExists) {
+        Logger.info(`Creating index for current provider: ${currentIndexName}`);
+        await this.pinecone.createIndex({
+          name: currentIndexName,
+          dimension: currentDimension,
+          metric: 'cosine',
+          spec: {
+            serverless: {
+              cloud: 'aws',
+              region: 'us-east-1',
+            },
+          },
+        });
+        Logger.info(
+          `Created new Pinecone index: ${currentIndexName} with dimension ${currentDimension}`,
+        );
+      }
+    } catch (error) {
+      Logger.error(
+        `Failed to ensure correct index: ${currentIndexName}`,
+        error,
+      );
       throw error;
     }
   }
@@ -59,6 +127,9 @@ class RAGService {
    */
   async initializeWithContent(content: Content): Promise<void> {
     try {
+      // Ensure we have the correct index for current provider
+      await this.ensureCorrectIndex();
+
       // Convert content data to documents for vectorization
       const documents: Document[] = [];
 
@@ -103,7 +174,7 @@ class RAGService {
 
       // Store documents in Pinecone
       if (documents.length > 0) {
-        const index = this.pinecone.index(this.indexName);
+        const index = this.pinecone.index(this.getIndexName());
         const vectorStore = await PineconeStore.fromExistingIndex(
           this.embeddings,
           {
@@ -115,7 +186,11 @@ class RAGService {
 
         await vectorStore.addDocuments(documents);
         Logger.info(
-          `Added ${documents.length} content documents to vector store for content ${content._id}`,
+          `Added ${
+            documents.length
+          } content documents to vector store for content ${
+            content._id
+          } using ${this.embeddings.getProviderStatus().primary} embeddings`,
         );
       }
     } catch (error) {
@@ -136,6 +211,9 @@ class RAGService {
     metadata: Record<string, any>,
   ): Promise<void> {
     try {
+      // Ensure we have the correct index for current provider
+      await this.ensureCorrectIndex();
+
       // Create document from analytics data
       const analyticsText = JSON.stringify(analytics);
       const chunks = await this.textSplitter.splitText(analyticsText);
@@ -153,7 +231,7 @@ class RAGService {
       );
 
       // Store in vector database
-      const index = this.pinecone.index(this.indexName);
+      const index = this.pinecone.index(this.getIndexName());
       const vectorStore = await PineconeStore.fromExistingIndex(
         this.embeddings,
         {
@@ -165,7 +243,11 @@ class RAGService {
 
       await vectorStore.addDocuments(documents);
       Logger.info(
-        `Added analytics with ${documents.length} chunks to vector store for content ${contentId}`,
+        `Added analytics with ${
+          documents.length
+        } chunks to vector store for content ${contentId} using ${
+          this.embeddings.getProviderStatus().primary
+        } embeddings`,
       );
     } catch (error) {
       Logger.error(
@@ -185,7 +267,10 @@ class RAGService {
     filter?: Record<string, any>,
   ): Promise<Document[]> {
     try {
-      const index = this.pinecone.index(this.indexName);
+      // Ensure we have the correct index for current provider
+      await this.ensureCorrectIndex();
+
+      const index = this.pinecone.index(this.getIndexName());
       const vectorStore = await PineconeStore.fromExistingIndex(
         this.embeddings,
         {
@@ -293,7 +378,10 @@ class RAGService {
    */
   async getContentVersions(contentId: Types.ObjectId): Promise<Document[]> {
     try {
-      const index = this.pinecone.index(this.indexName);
+      // Ensure we have the correct index for current provider
+      await this.ensureCorrectIndex();
+
+      const index = this.pinecone.index(this.getIndexName());
       const vectorStore = await PineconeStore.fromExistingIndex(
         this.embeddings,
         {

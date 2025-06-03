@@ -1,6 +1,5 @@
 import { Types } from 'mongoose';
-import { OpenAI } from 'openai';
-import { config } from '../config';
+import { UnifiedLLMService, LLMProvider } from './llm.service';
 
 export interface Content {
   _id: Types.ObjectId;
@@ -32,33 +31,16 @@ export interface Content {
 }
 
 export class ContentService {
-  private openai: OpenAI;
-  // Use a valid model name
-  private model = 'gpt-3.5-turbo';
+  private llmService: UnifiedLLMService;
 
   constructor() {
-    this.openai = new OpenAI({
-      apiKey: config.openai.apiKey,
-    });
+    // Initialize with Gemini as primary provider (free model)
+    this.llmService = new UnifiedLLMService(LLMProvider.GEMINI);
   }
 
   async analyzeTrendingTopics(platform: string): Promise<string[]> {
     try {
-      const response = await this.openai.chat.completions.create({
-        model: this.model,
-        messages: [
-          {
-            role: 'system',
-            content: `Analyze trending topics for ${platform} and provide a list of relevant topics.`,
-          },
-        ],
-        temperature: 0.7,
-        max_tokens: 500,
-      });
-
-      const topics =
-        response.choices[0].message.content?.split('\n').filter(Boolean) || [];
-      return topics;
+      return await this.llmService.analyzeTrendingTopics(platform);
     } catch (error) {
       console.error('Error analyzing trending topics:', error);
       throw new Error('Failed to analyze trending topics');
@@ -70,21 +52,7 @@ export class ContentService {
     type: Content['type'],
   ): Promise<string[]> {
     try {
-      const response = await this.openai.chat.completions.create({
-        model: this.model,
-        messages: [
-          {
-            role: 'system',
-            content: `Generate creative content ideas for ${type} about ${topic}.`,
-          },
-        ],
-        temperature: 0.8,
-        max_tokens: 500,
-      });
-
-      const ideas =
-        response.choices[0].message.content?.split('\n').filter(Boolean) || [];
-      return ideas;
+      return await this.llmService.generateContentIdeas(topic, type);
     } catch (error) {
       console.error('Error generating content ideas:', error);
       throw new Error('Failed to generate content ideas');
@@ -103,29 +71,7 @@ export class ContentService {
         return content;
       }
 
-      const response = await this.openai.chat.completions.create({
-        model: this.model,
-        messages: [
-          {
-            role: 'system',
-            content: `You are a content optimization expert. Optimize the following content for ${platform}. Maintain the original message but make it more engaging and platform-appropriate.`,
-          },
-          {
-            role: 'user',
-            content: content,
-          },
-        ],
-        temperature: 0.7,
-        max_tokens: 1000,
-      });
-
-      const optimizedContent = response.choices[0]?.message?.content;
-      if (!optimizedContent) {
-        console.warn('No optimized content received from OpenAI');
-        return content;
-      }
-
-      return optimizedContent;
+      return await this.llmService.optimizeContent(content, platform);
     } catch (error) {
       console.error('Error optimizing content:', error);
       // Return original content instead of throwing error

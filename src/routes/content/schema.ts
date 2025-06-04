@@ -46,7 +46,7 @@ export default {
     title: Joi.string().required().max(200),
     description: Joi.string(),
     type: Joi.string()
-      .valid('article', 'video', 'social', 'podcast')
+      .valid('article', 'video', 'social', 'podcast', 'newsletter', 'blog_post')
       .required(),
     platform: Joi.array().items(Joi.string()).required(),
     tags: Joi.array().items(Joi.string()),
@@ -56,7 +56,14 @@ export default {
   update: Joi.object({
     title: Joi.string().max(200),
     description: Joi.string(),
-    type: Joi.string().valid('article', 'video', 'social', 'podcast'),
+    type: Joi.string().valid(
+      'article',
+      'video',
+      'social',
+      'podcast',
+      'newsletter',
+      'blog_post',
+    ),
     platform: Joi.array().items(Joi.string()),
     tags: Joi.array().items(Joi.string()),
     scheduledDate: Joi.date().iso(),

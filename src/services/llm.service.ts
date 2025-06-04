@@ -174,6 +174,37 @@ export class UnifiedLLMService {
     );
   }
 
+  // Add methods for enhanced content generation
+  async generateRichContentBody(
+    title: string,
+    description: string,
+    type: string,
+    keyPoints?: string[],
+  ): Promise<any> {
+    return this.executeWithFallback(
+      (service) =>
+        service.generateRichContentBody
+          ? service.generateRichContentBody(title, description, type, keyPoints)
+          : Promise.reject(new Error('Method not available')),
+      'generateRichContentBody',
+    );
+  }
+
+  async generateAISuggestions(
+    title: string,
+    description: string,
+    type: string,
+    platforms: string[],
+  ): Promise<any> {
+    return this.executeWithFallback(
+      (service) =>
+        service.generateAISuggestions
+          ? service.generateAISuggestions(title, description, type, platforms)
+          : Promise.reject(new Error('Method not available')),
+      'generateAISuggestions',
+    );
+  }
+
   // Method to manually switch primary provider
   switchPrimaryProvider(provider: LLMProvider): void {
     if (

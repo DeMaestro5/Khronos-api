@@ -130,6 +130,9 @@ export default {
     platform: Joi.array().items(Joi.string()),
     tags: Joi.array().items(Joi.string()),
 
+    // Priority field for calendar event updates
+    priority: Joi.string().valid('low', 'medium', 'high', 'critical'),
+
     // Enhanced scheduling update
     scheduling: Joi.object({
       startDate: Joi.date().iso(),
@@ -197,4 +200,97 @@ export default {
   schedule: Joi.object({
     scheduledDate: Joi.date().iso().required(),
   }),
+
+  priority: Joi.object({
+    priority: Joi.string()
+      .valid('low', 'medium', 'high', 'critical')
+      .required(),
+  }),
+
+  archive: Joi.object({
+    // Optional reason for archiving
+    reason: Joi.string().max(500),
+    // Whether to preserve calendar events (default: false - removes them)
+    preserveCalendarEvents: Joi.boolean().default(false),
+  }),
+
+  unarchive: Joi.object({
+    // Status to restore to when unarchiving
+    restoreStatus: Joi.string()
+      .valid('draft', 'scheduled', 'published')
+      .default('draft'),
+    // Whether to restore calendar events if they were preserved
+    restoreCalendarEvents: Joi.boolean().default(true),
+  }),
+
+  updateSchedule: Joi.object({
+    // Enhanced scheduling object for updating scheduling details
+    scheduling: Joi.object({
+      startDate: Joi.date().iso().required(),
+      endDate: Joi.date().iso().greater(Joi.ref('startDate')),
+      timezone: Joi.string().default('UTC'),
+      allDay: Joi.boolean().default(false),
+      autoPublish: Joi.boolean().default(false),
+      priority: Joi.string()
+        .valid('low', 'medium', 'high', 'critical')
+        .default('medium'),
+
+      // Cross-platform scheduling - different times for different platforms
+      platformSchedules: Joi.array().items(
+        Joi.object({
+          platform: Joi.string().required(),
+          scheduledDate: Joi.date().iso().required(),
+          customContent: Joi.string(), // Platform-specific optimized content
+          autoPublish: Joi.boolean().default(false),
+        }),
+      ),
+
+      // Recurrence for recurring content (like daily social posts)
+      recurrence: Joi.object({
+        frequency: Joi.string()
+          .valid('daily', 'weekly', 'monthly', 'yearly')
+          .required(),
+        interval: Joi.number().integer().min(1).default(1),
+        daysOfWeek: Joi.array().items(Joi.number().integer().min(0).max(6)), // For weekly recurrence
+        endDate: Joi.date().iso(),
+        occurrences: Joi.number().integer().min(1),
+      }),
+
+      // Reminders for content creators
+      reminders: Joi.array().items(
+        Joi.object({
+          type: Joi.string().valid('email', 'push', 'webhook').required(),
+          time: Joi.number().integer().min(0).required(), // minutes before start
+        }),
+      ),
+
+      // Publishing settings
+      publishSettings: Joi.object({
+        optimizeForEngagement: Joi.boolean().default(true),
+        crossPost: Joi.boolean().default(false),
+        includeHashtags: Joi.boolean().default(true),
+        mentionInfluencers: Joi.boolean().default(false),
+      }),
+
+      // AI optimization preferences
+      aiOptimization: Joi.object({
+        useOptimalTimes: Joi.boolean().default(true),
+        adjustForAudience: Joi.boolean().default(true),
+        avoidCompetitorPosts: Joi.boolean().default(true),
+      }),
+    }),
+
+    // Legacy field for backward compatibility (will be converted to scheduling format)
+    scheduledDate: Joi.date().iso(),
+
+    // Priority field for calendar event
+    priority: Joi.string()
+      .valid('low', 'medium', 'high', 'critical')
+      .default('medium'),
+  })
+    .xor('scheduling', 'scheduledDate') // Either scheduling object OR scheduledDate, but not both
+    .messages({
+      'object.xor':
+        'Provide either scheduling object or scheduledDate, but not both',
+    }),
 };

@@ -336,7 +336,7 @@ router.put(
     if (content.userId._id.toString() !== req.user._id.toString())
       throw new BadRequestError('Not authorized to update this content');
 
-    const { title, description, type, platform, tags } = req.body;
+    const { title, description, type, platform, tags, priority } = req.body;
 
     // Optimize content for each platform if description is updated
     let optimizedContent;
@@ -365,10 +365,49 @@ router.put(
       tags: tags || content.tags,
     } as any);
 
-    new SuccessResponse('Content updated successfully', {
+    // 🔄 UPDATE CALENDAR EVENTS IF PRIORITY CHANGED
+    let calendarEventsUpdated = 0;
+    if (priority) {
+      try {
+        console.log('Updating calendar event priorities...');
+        const CalendarRepo = (
+          await import('../../database/repository/CalendarRepo')
+        ).default;
+
+        // Find calendar events for this content
+        const calendarEvents = await CalendarRepo.findByContentId(content._id);
+
+        // Update priority for each calendar event
+        const updatePromises = calendarEvents.map((event) =>
+          CalendarRepo.update({
+            ...event,
+            priority: priority as any,
+          }),
+        );
+
+        await Promise.all(updatePromises);
+        calendarEventsUpdated = calendarEvents.length;
+        console.log(
+          `Updated priority for ${calendarEventsUpdated} calendar events`,
+        );
+      } catch (error) {
+        console.error('Failed to update calendar event priorities:', error);
+        // Don't fail the content update if calendar update fails
+      }
+    }
+
+    const responseData = {
       content: updatedContent,
       optimizedContent,
-    }).send(res);
+      ...(priority && {
+        priorityUpdate: {
+          newPriority: priority,
+          calendarEventsUpdated,
+        },
+      }),
+    };
+
+    new SuccessResponse('Content updated successfully', responseData).send(res);
   }),
 );
 
@@ -388,6 +427,68 @@ router.put(
       req.body.status as Content['status'],
     );
     new SuccessResponse('Content status updated successfully', null).send(res);
+  }),
+);
+
+router.put(
+  '/:id/priority',
+  validator(schema.priority),
+  asyncHandler(async (req: ProtectedRequest, res: Response) => {
+    const { priority } = req.body;
+
+    const content = await ContentRepo.findById(
+      new Types.ObjectId(req.params.id),
+    );
+    if (!content) throw new NotFoundError('Content not found');
+    if (content.userId._id.toString() !== req.user._id.toString())
+      throw new BadRequestError(
+        'Not authorized to update this content priority',
+      );
+
+    // 🔄 UPDATE CALENDAR EVENTS PRIORITY
+    let calendarEventsUpdated = 0;
+    try {
+      console.log('Updating calendar event priorities...');
+      const CalendarRepo = (
+        await import('../../database/repository/CalendarRepo')
+      ).default;
+
+      // Find calendar events for this content
+      const calendarEvents = await CalendarRepo.findByContentId(content._id);
+
+      // Update priority for each calendar event
+      const updatePromises = calendarEvents.map((event) =>
+        CalendarRepo.update({
+          ...event,
+          priority: priority as any,
+        }),
+      );
+
+      await Promise.all(updatePromises);
+      calendarEventsUpdated = calendarEvents.length;
+      console.log(
+        `Updated priority for ${calendarEventsUpdated} calendar events`,
+      );
+    } catch (error) {
+      console.error('Failed to update calendar event priorities:', error);
+      // Continue even if calendar update fails
+    }
+
+    const responseData = {
+      contentId: content._id,
+      newPriority: priority,
+      calendarEventsUpdated,
+      message: `Priority updated to ${priority}${
+        calendarEventsUpdated > 0
+          ? ` and synced to ${calendarEventsUpdated} calendar events`
+          : ''
+      }`,
+    };
+
+    new SuccessResponse(
+      'Content priority updated successfully',
+      responseData,
+    ).send(res);
   }),
 );
 
@@ -538,6 +639,103 @@ router.post(
     new SuccessResponse('Content scheduled successfully', updatedContent).send(
       res,
     );
+  }),
+);
+
+router.put(
+  '/:id/schedule',
+  validator(schema.updateSchedule),
+  asyncHandler(async (req: ProtectedRequest, res: Response) => {
+    const { scheduling, scheduledDate, priority } = req.body;
+
+    const content = await ContentRepo.findById(
+      new Types.ObjectId(req.params.id),
+    );
+    if (!content) throw new NotFoundError('Content not found');
+    if (content.userId._id.toString() !== req.user._id.toString())
+      throw new BadRequestError(
+        'Not authorized to update this content schedule',
+      );
+
+    // Determine new scheduling info (enhanced scheduling or legacy scheduledDate)
+    let newScheduling = null;
+    if (scheduling?.startDate) {
+      // Enhanced scheduling format
+      newScheduling = scheduling;
+    } else if (scheduledDate) {
+      // Legacy scheduling - convert to enhanced format
+      newScheduling = {
+        startDate: new Date(scheduledDate),
+        endDate: new Date(new Date(scheduledDate).getTime() + 30 * 60 * 1000), // 30 minutes default
+        timezone: 'UTC',
+        autoPublish: false,
+        priority: priority || 'medium',
+      };
+    } else {
+      throw new BadRequestError(
+        'Either scheduling object or scheduledDate is required',
+      );
+    }
+
+    // Update content with new scheduling information
+    const updatedContent = await ContentRepo.update({
+      ...content,
+      metadata: {
+        ...content.metadata,
+        status: 'scheduled',
+        scheduledDate: newScheduling.startDate,
+        schedulingDetails: newScheduling,
+      },
+      status: 'scheduled',
+      scheduling: {
+        timezone: newScheduling.timezone || 'UTC',
+        optimalTimes: newScheduling.aiOptimization?.useOptimalTimes
+          ? []
+          : undefined,
+        frequency: newScheduling.recurrence?.frequency || 'once',
+      },
+    } as any);
+
+    // 🔄 UPDATE CALENDAR EVENTS
+    let calendarEvents: any[] = [];
+    try {
+      console.log('Updating calendar events for rescheduled content...');
+
+      // Remove existing calendar events for this content
+      const CalendarRepo = (
+        await import('../../database/repository/CalendarRepo')
+      ).default;
+      await CalendarRepo.removeByContentId(content._id);
+      console.log('Removed existing calendar events');
+
+      // Create new calendar events with updated schedule
+      calendarEvents =
+        await contentCalendarService.createCalendarEventsForContent(
+          updatedContent,
+          newScheduling,
+          req.user._id,
+        );
+      console.log(`Created ${calendarEvents.length} new calendar events`);
+    } catch (error) {
+      console.error('Failed to update calendar events:', error);
+      // Don't fail the schedule update if calendar update fails
+    }
+
+    const responseData = {
+      content: updatedContent,
+      calendarEvents,
+      scheduling: {
+        isScheduled: true,
+        schedulingDetails: newScheduling,
+        calendarEventsUpdated: calendarEvents.length,
+        previousSchedule: content.metadata?.scheduledDate,
+      },
+    };
+
+    new SuccessResponse(
+      'Content schedule updated successfully',
+      responseData,
+    ).send(res);
   }),
 );
 

@@ -207,6 +207,22 @@ export default {
       .required(),
   }),
 
+  archive: Joi.object({
+    // Optional reason for archiving
+    reason: Joi.string().max(500),
+    // Whether to preserve calendar events (default: false - removes them)
+    preserveCalendarEvents: Joi.boolean().default(false),
+  }),
+
+  unarchive: Joi.object({
+    // Status to restore to when unarchiving
+    restoreStatus: Joi.string()
+      .valid('draft', 'scheduled', 'published')
+      .default('draft'),
+    // Whether to restore calendar events if they were preserved
+    restoreCalendarEvents: Joi.boolean().default(true),
+  }),
+
   updateSchedule: Joi.object({
     // Enhanced scheduling object for updating scheduling details
     scheduling: Joi.object({

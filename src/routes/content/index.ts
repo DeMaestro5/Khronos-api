@@ -135,11 +135,11 @@ router.post(
         type,
         status: contentStatus,
         platform,
-        tags,
+        tags: tags || [],
         category: selectedIdea?.targetAudience || 'General',
         language: 'en',
         targetAudience: [selectedIdea?.targetAudience || 'General audience'],
-        contentPillars: tags.slice(0, 3),
+        contentPillars: (tags || []).slice(0, 3),
         // Store scheduling info in metadata
         ...(contentScheduling && {
           scheduledDate: contentScheduling.startDate,
@@ -154,7 +154,7 @@ router.post(
       type,
       status: contentStatus,
       platform,
-      tags,
+      tags: tags || [],
       platforms: platformsInfo,
       author: authorInfo,
       stats: {
@@ -166,7 +166,7 @@ router.post(
       },
       aiSuggestions,
       aiGenerated: !description, // True if we generated the content
-      contentIdeas: contentIdeas.slice(0, 5), // Store top 5 ideas
+      contentIdeas: (contentIdeas || []).slice(0, 5), // Store top 5 ideas
       optimizedContent,
       engagement: {
         likes: 0,
@@ -224,13 +224,13 @@ router.post(
     const responseData = {
       content,
       calendarEvents, // Include created calendar events in response
-      contentIdeas: contentIdeas.length > 0 ? contentIdeas : undefined,
+      contentIdeas: (contentIdeas || []).length > 0 ? contentIdeas : undefined,
       optimizedContent:
         Object.keys(optimizedContent).length > 0 ? optimizedContent : undefined,
       aiSuggestions,
       platforms: platformsInfo,
       author: authorInfo,
-      recommendations: contentIdeas.slice(1, 4), // Next 3 ideas as recommendations
+      recommendations: (contentIdeas || []).slice(1, 4), // Next 3 ideas as recommendations
       insights: {
         estimatedReach:
           aiSuggestions?.estimatedReach ||
@@ -427,6 +427,212 @@ router.put(
       req.body.status as Content['status'],
     );
     new SuccessResponse('Content status updated successfully', null).send(res);
+  }),
+);
+
+router.put(
+  '/:id/archive',
+  validator(schema.archive),
+  asyncHandler(async (req: ProtectedRequest, res: Response) => {
+    const { reason, preserveCalendarEvents } = req.body;
+
+    const content = await ContentRepo.findById(
+      new Types.ObjectId(req.params.id),
+    );
+    if (!content) throw new NotFoundError('Content not found');
+    if (content.userId._id.toString() !== req.user._id.toString())
+      throw new BadRequestError('Not authorized to archive this content');
+
+    if (content.status === 'archived') {
+      throw new BadRequestError('Content is already archived');
+    }
+
+    // Store the previous status for potential unarchiving
+    const previousStatus = content.status;
+    const archivedAt = new Date();
+
+    // Update content status to archived
+    const updatedContent = await ContentRepo.update({
+      ...content,
+      metadata: {
+        ...content.metadata,
+        status: 'archived',
+        previousStatus, // Store for unarchiving
+        archivedAt,
+        archiveReason: reason,
+      },
+      status: 'archived',
+    } as any);
+
+    // 🗂️ HANDLE CALENDAR EVENTS
+    let calendarEventsAction = 'none';
+    let calendarEventsCount = 0;
+
+    try {
+      const CalendarRepo = (
+        await import('../../database/repository/CalendarRepo')
+      ).default;
+
+      // Find calendar events for this content
+      const calendarEvents = await CalendarRepo.findByContentId(content._id);
+      calendarEventsCount = calendarEvents.length;
+
+      if (calendarEventsCount > 0) {
+        if (preserveCalendarEvents) {
+          // Update calendar events to archived status instead of deleting
+          const updatePromises = calendarEvents.map((event) =>
+            CalendarRepo.update({
+              ...event,
+              status: 'cancelled' as any,
+              notes: `Content archived: ${reason || 'No reason provided'}`,
+            }),
+          );
+          await Promise.all(updatePromises);
+          calendarEventsAction = 'preserved';
+          console.log(
+            `Marked ${calendarEventsCount} calendar events as cancelled`,
+          );
+        } else {
+          // Remove calendar events for archived content
+          await CalendarRepo.removeByContentId(content._id);
+          calendarEventsAction = 'removed';
+          console.log(`Removed ${calendarEventsCount} calendar events`);
+        }
+      }
+    } catch (error) {
+      console.error(
+        'Failed to handle calendar events during archiving:',
+        error,
+      );
+      // Don't fail the archive operation if calendar update fails
+    }
+
+    const responseData = {
+      content: updatedContent,
+      archiveInfo: {
+        previousStatus,
+        archivedAt,
+        reason: reason || null,
+        calendarEvents: {
+          action: calendarEventsAction,
+          count: calendarEventsCount,
+          preserved: preserveCalendarEvents,
+        },
+      },
+    };
+
+    new SuccessResponse('Content archived successfully', responseData).send(
+      res,
+    );
+  }),
+);
+
+router.put(
+  '/:id/unarchive',
+  validator(schema.unarchive),
+  asyncHandler(async (req: ProtectedRequest, res: Response) => {
+    const { restoreStatus, restoreCalendarEvents } = req.body;
+
+    const content = await ContentRepo.findById(
+      new Types.ObjectId(req.params.id),
+    );
+    if (!content) throw new NotFoundError('Content not found');
+    if (content.userId._id.toString() !== req.user._id.toString())
+      throw new BadRequestError('Not authorized to unarchive this content');
+
+    if (content.status !== 'archived') {
+      throw new BadRequestError('Content is not archived');
+    }
+
+    // Determine status to restore to
+    const statusToRestore =
+      restoreStatus || (content.metadata as any)?.previousStatus || 'draft';
+    const unarchivedAt = new Date();
+
+    // Update content status
+    const updatedContent = await ContentRepo.update({
+      ...content,
+      metadata: {
+        ...content.metadata,
+        status: statusToRestore,
+        unarchivedAt,
+        // Clear archive-related fields
+        previousStatus: undefined,
+        archivedAt: undefined,
+        archiveReason: undefined,
+      },
+      status: statusToRestore,
+    } as any);
+
+    // 📅 RESTORE CALENDAR EVENTS IF NEEDED
+    let calendarEventsAction = 'none';
+    let calendarEventsCount = 0;
+
+    if (restoreCalendarEvents && statusToRestore === 'scheduled') {
+      try {
+        // Check if content has scheduling information to restore calendar events
+        const hasScheduling =
+          content.metadata?.scheduledDate ||
+          (content.metadata as any)?.schedulingDetails;
+
+        if (hasScheduling) {
+          console.log(
+            'Attempting to restore calendar events for unarchived content...',
+          );
+
+          // Create new calendar events if content is being restored to scheduled status
+          let schedulingInfo = (content.metadata as any)?.schedulingDetails;
+          if (!schedulingInfo && content.metadata?.scheduledDate) {
+            // Convert legacy scheduling to new format
+            schedulingInfo = {
+              startDate: new Date(content.metadata.scheduledDate),
+              endDate: new Date(
+                new Date(content.metadata.scheduledDate).getTime() +
+                  30 * 60 * 1000,
+              ),
+              timezone: 'UTC',
+              autoPublish: false,
+              priority: 'medium',
+            };
+          }
+
+          if (schedulingInfo) {
+            const calendarEvents =
+              await contentCalendarService.createCalendarEventsForContent(
+                updatedContent,
+                schedulingInfo,
+                req.user._id,
+              );
+            calendarEventsCount = calendarEvents.length;
+            calendarEventsAction = 'restored';
+            console.log(`Created ${calendarEventsCount} new calendar events`);
+          }
+        }
+      } catch (error) {
+        console.error(
+          'Failed to restore calendar events during unarchiving:',
+          error,
+        );
+        // Don't fail the unarchive operation if calendar restoration fails
+      }
+    }
+
+    const responseData = {
+      content: updatedContent,
+      unarchiveInfo: {
+        restoredStatus: statusToRestore,
+        unarchivedAt,
+        calendarEvents: {
+          action: calendarEventsAction,
+          count: calendarEventsCount,
+          attempted: restoreCalendarEvents,
+        },
+      },
+    };
+
+    new SuccessResponse('Content unarchived successfully', responseData).send(
+      res,
+    );
   }),
 );
 

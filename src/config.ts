@@ -18,8 +18,12 @@ export const db = {
 export const corsUrl = process.env.CORS_URL;
 
 export const tokenInfo = {
-  accessTokenValidity: parseInt(process.env.ACCESS_TOKEN_VALIDITY_SEC || '0'),
-  refreshTokenValidity: parseInt(process.env.REFRESH_TOKEN_VALIDITY_SEC || '0'),
+  accessTokenValidity: parseInt(
+    process.env.ACCESS_TOKEN_VALIDITY_SEC || '21600',
+  ),
+  refreshTokenValidity: parseInt(
+    process.env.REFRESH_TOKEN_VALIDITY_SEC || '604800',
+  ),
   issuer: process.env.TOKEN_ISSUER || '',
   audience: process.env.TOKEN_AUDIENCE || '',
 };

@@ -12,6 +12,7 @@ import forgotPassword from './access/forgot-password';
 import resetPassword from './access/reset-password';
 import content from './content';
 import llm from './llm';
+import calendar from './calendar';
 
 const router = express.Router();
 
@@ -31,5 +32,6 @@ router.use('/api/v1/forgot-password', forgotPassword);
 router.use('/api/v1/reset-password', resetPassword);
 router.use('/api/v1/content', content);
 router.use('/api/v1/llm', llm);
+router.use('/api/v1/calendar', calendar);
 
 export default router;

@@ -11,9 +11,11 @@ import authentication from '../../auth/authentication';
 import { ContentService } from '../../services/content.service';
 import Content from '../../database/model/content';
 import RAGService from '../../services/RAG-service';
+import { ContentCalendarService } from '../../services/content-calendar.service';
 
 const router = Router();
 const contentService = new ContentService();
+const contentCalendarService = new ContentCalendarService();
 
 router.use(authentication);
 
@@ -21,7 +23,15 @@ router.post(
   '/',
   validator(schema.create),
   asyncHandler(async (req: ProtectedRequest, res: Response) => {
-    const { title, description, type, platform, tags } = req.body;
+    const {
+      title,
+      description,
+      type,
+      platform,
+      tags,
+      scheduling,
+      scheduledDate,
+    } = req.body;
 
     // Generate comprehensive content ideas if not provided
     let contentIdeas: any[] = [];
@@ -95,6 +105,27 @@ router.post(
       role: req.user.role === 'ADMIN' ? 'Administrator' : 'Content Creator',
     };
 
+    // Determine scheduling info (new enhanced scheduling or legacy scheduledDate)
+    let contentScheduling = null;
+    let contentStatus = 'draft';
+
+    if (scheduling?.startDate) {
+      // New enhanced scheduling
+      contentScheduling = scheduling;
+      contentStatus = 'scheduled';
+    } else if (scheduledDate) {
+      // Legacy scheduling - convert to new format
+      contentScheduling = {
+        startDate: new Date(scheduledDate),
+        endDate: new Date(new Date(scheduledDate).getTime() + 30 * 60 * 1000), // 30 minutes default
+        timezone: 'UTC',
+        autoPublish: false,
+        // Include priority from form for calendar event
+        priority: req.body.priority || 'medium',
+      };
+      contentStatus = 'scheduled';
+    }
+
     // Generate comprehensive content object
     const content = await ContentRepo.create({
       userId: req.user._id,
@@ -102,13 +133,18 @@ router.post(
         title,
         description: primaryContent,
         type,
-        status: 'draft',
+        status: contentStatus,
         platform,
         tags,
         category: selectedIdea?.targetAudience || 'General',
         language: 'en',
         targetAudience: [selectedIdea?.targetAudience || 'General audience'],
         contentPillars: tags.slice(0, 3),
+        // Store scheduling info in metadata
+        ...(contentScheduling && {
+          scheduledDate: contentScheduling.startDate,
+          schedulingDetails: contentScheduling,
+        }),
       },
       title,
       description: primaryContent,
@@ -116,7 +152,7 @@ router.post(
         selectedIdea?.excerpt || primaryContent.substring(0, 150) + '...',
       body: bodyContent,
       type,
-      status: 'draft',
+      status: contentStatus,
       platform,
       tags,
       platforms: platformsInfo,
@@ -149,9 +185,10 @@ router.post(
           .replace(/\s+/g, '-')}`,
       },
       scheduling: {
-        timezone: 'UTC',
+        timezone: contentScheduling?.timezone || 'UTC',
         optimalTimes: aiSuggestions?.optimalPostingTimes || [],
-        frequency: 'once',
+        frequency: contentScheduling?.recurrence?.frequency || 'once',
+        ...(contentScheduling && { details: contentScheduling }),
       },
       analytics: {
         impressions: 0,
@@ -162,12 +199,31 @@ router.post(
       },
     } as any);
 
+    // 🚀 AUTOMATIC CALENDAR EVENT CREATION
+    let calendarEvents: any[] = [];
+    if (contentScheduling) {
+      try {
+        console.log('Creating calendar events for scheduled content...');
+        calendarEvents =
+          await contentCalendarService.createCalendarEventsForContent(
+            content,
+            contentScheduling,
+            req.user._id,
+          );
+        console.log(`Created ${calendarEvents.length} calendar events`);
+      } catch (error) {
+        console.error('Failed to create calendar events:', error);
+        // Don't fail the content creation if calendar creation fails
+      }
+    }
+
     // Initialize RAG service with the new content
     await RAGService.initializeWithContent(content);
 
     // Create comprehensive response
     const responseData = {
       content,
+      calendarEvents, // Include created calendar events in response
       contentIdeas: contentIdeas.length > 0 ? contentIdeas : undefined,
       optimizedContent:
         Object.keys(optimizedContent).length > 0 ? optimizedContent : undefined,
@@ -184,6 +240,15 @@ router.post(
         trendingScore:
           selectedIdea?.trendingScore || Math.floor(Math.random() * 10) + 1,
       },
+      scheduling: contentScheduling
+        ? {
+            isScheduled: true,
+            schedulingDetails: contentScheduling,
+            calendarEventsCreated: calendarEvents.length,
+          }
+        : {
+            isScheduled: false,
+          },
     };
 
     new SuccessResponse('Content created successfully', responseData).send(res);
@@ -328,13 +393,14 @@ router.put(
 
 router.delete(
   '/:id',
-  validator(schema.id),
   asyncHandler(async (req: ProtectedRequest, res: Response) => {
     const content = await ContentRepo.findById(
       new Types.ObjectId(req.params.id),
     );
+    console.log('content.userId', content?.userId._id.toString());
+    console.log('req.user._id', req.user._id.toString());
     if (!content) throw new NotFoundError('Content not found');
-    if (content.userId.toString() !== req.user._id.toString())
+    if (content.userId._id.toString() !== req.user._id.toString())
       throw new BadRequestError('Not authorized to delete this content');
 
     await ContentRepo.remove(new Types.ObjectId(req.params.id));
@@ -399,7 +465,7 @@ router.post(
       new Types.ObjectId(req.params.id),
     );
     if (!content) throw new NotFoundError('Content not found');
-    if (content.userId.toString() !== req.user._id.toString())
+    if (content.userId._id.toString() !== req.user._id.toString())
       throw new BadRequestError('Not authorized to publish this content');
 
     const updatedContent = await ContentRepo.update({
@@ -426,7 +492,7 @@ router.post(
       new Types.ObjectId(req.params.id),
     );
     if (!content) throw new NotFoundError('Content not found');
-    if (content.userId.toString() !== req.user._id.toString())
+    if (content.userId._id.toString() !== req.user._id.toString())
       throw new BadRequestError('Not authorized to unpublish this content');
 
     const updatedContent = await ContentRepo.update({
@@ -456,7 +522,7 @@ router.post(
       new Types.ObjectId(req.params.id),
     );
     if (!content) throw new NotFoundError('Content not found');
-    if (content.userId.toString() !== req.user._id.toString())
+    if (content.userId._id.toString() !== req.user._id.toString())
       throw new BadRequestError('Not authorized to schedule this content');
 
     const updatedContent = await ContentRepo.update({
@@ -483,7 +549,7 @@ router.post(
       new Types.ObjectId(req.params.id),
     );
     if (!content) throw new NotFoundError('Content not found');
-    if (content.userId.toString() !== req.user._id.toString())
+    if (content.userId._id.toString() !== req.user._id.toString())
       throw new BadRequestError('Not authorized to duplicate this content');
 
     const duplicatedContent = await ContentRepo.create({
@@ -516,7 +582,7 @@ router.get(
       new Types.ObjectId(req.params.id),
     );
     if (!content) throw new NotFoundError('Content not found');
-    if (content.userId.toString() !== req.user._id.toString())
+    if (content.userId._id.toString() !== req.user._id.toString())
       throw new BadRequestError(
         'Not authorized to view versions of this content',
       );
@@ -538,7 +604,7 @@ router.get(
       new Types.ObjectId(req.params.id),
     );
     if (!content) throw new NotFoundError('Content not found');
-    if (content.userId.toString() !== req.user._id.toString())
+    if (content.userId._id.toString() !== req.user._id.toString())
       throw new BadRequestError(
         'Not authorized to view analytics of this content',
       );

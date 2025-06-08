@@ -13,6 +13,7 @@ import resetPassword from './access/reset-password';
 import content from './content';
 import llm from './llm';
 import calendar from './calendar';
+import chat from './chat';
 
 const router = express.Router();
 
@@ -33,5 +34,6 @@ router.use('/api/v1/reset-password', resetPassword);
 router.use('/api/v1/content', content);
 router.use('/api/v1/llm', llm);
 router.use('/api/v1/calendar', calendar);
+router.use('/api/v1/chat', chat);
 
 export default router;

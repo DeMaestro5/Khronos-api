@@ -190,6 +190,19 @@ export class UnifiedLLMService {
     );
   }
 
+  // New method for simple chat responses
+  async generateChatResponse(prompt: string): Promise<string> {
+    return this.executeWithFallback(
+      (service) =>
+        service.generateChatResponse
+          ? service.generateChatResponse(prompt)
+          : service.optimizeContent
+            ? service.optimizeContent(prompt, 'conversation')
+            : Promise.reject(new Error('Method not available')),
+      'generateChatResponse',
+    );
+  }
+
   async generateAISuggestions(
     title: string,
     description: string,

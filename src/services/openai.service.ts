@@ -133,6 +133,28 @@ export class OpenAIService {
     }
   }
 
+  // New method for chat responses
+  async generateChatResponse(prompt: string): Promise<string> {
+    try {
+      const response = await this.openai.chat.completions.create({
+        model: this.model,
+        messages: [
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        temperature: 0.7,
+        max_tokens: 1000,
+      });
+
+      return response.choices[0].message.content || '';
+    } catch (error) {
+      console.error('Error generating chat response:', error);
+      throw new Error('Failed to generate chat response');
+    }
+  }
+
   async analyzeAudienceEngagement(
     content: string,
     platform: string,

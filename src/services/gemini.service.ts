@@ -1018,35 +1018,51 @@ Focus on making suggestions that will increase engagement, reach, and overall co
 
   async optimizeContent(content: string, platform: string): Promise<string> {
     try {
-      if (!content) {
-        console.warn('No content provided for optimization');
-        return '';
-      }
-
-      if (!platform) {
-        console.warn('No platform specified for optimization');
-        return content;
-      }
-
       const model = this.genAI.getGenerativeModel({ model: this.model });
-      const prompt = `You are a content optimization expert. Optimize the following content for ${platform}. Maintain the original message but make it more engaging and platform-appropriate. Return only the optimized content:
 
-      Content: ${content}`;
+      const platformGuidelines = {
+        twitter: 'Keep it under 280 characters, use hashtags strategically',
+        facebook: 'Engaging, conversational tone, encourage interaction',
+        instagram: 'Visual-first approach, use emojis, hashtags at the end',
+        linkedin: 'Professional tone, industry insights, value-driven',
+        youtube: 'Attention-grabbing title, clear value proposition',
+        conversation: 'Conversational, helpful, detailed explanations',
+      };
+
+      const guidelines =
+        platformGuidelines[platform as keyof typeof platformGuidelines] ||
+        'General optimization for engagement';
+
+      const prompt = `Optimize this content for ${platform}. Guidelines: ${guidelines}
+
+Content: ${content}
+
+Provide only the optimized content, nothing else:`;
 
       const result = await model.generateContent(prompt);
       const response = await result.response;
-      const optimizedContent = response.text().trim();
+      const text = response.text();
 
-      if (!optimizedContent) {
-        console.warn('No optimized content received from Gemini');
-        return content;
-      }
-
-      return optimizedContent;
+      return text.trim();
     } catch (error) {
       console.error('Error optimizing content with Gemini:', error);
-      // Return original content instead of throwing error
-      return content;
+      throw new Error('Failed to optimize content');
+    }
+  }
+
+  // New method for chat responses
+  async generateChatResponse(prompt: string): Promise<string> {
+    try {
+      const model = this.genAI.getGenerativeModel({ model: this.model });
+
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text();
+
+      return text.trim();
+    } catch (error) {
+      console.error('Error generating chat response with Gemini:', error);
+      throw new Error('Failed to generate chat response');
     }
   }
 

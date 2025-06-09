@@ -14,18 +14,15 @@ export class ContentFilter {
   ];
 
   private static spamPatterns: RegExp[] = [
-    /(.)\1{4,}/g, // Repeated characters
-    /^[^a-zA-Z]*$/g, // Only symbols/numbers
-    /\b(test|testing|hello|hi|hey)\b$/gi, // Single word greetings
-    /^.{1,3}$/g, // Very short messages
+    /(.)\1{10,}/g, // Repeated characters (increased threshold)
+    /^[^a-zA-Z\s]*$/g, // Only symbols/numbers (but allow spaces)
+    /^.{1,2}$/g, // Very short messages (reduced from 3 to 2)
   ];
 
   static async validateMessageContent(
     message: string,
   ): Promise<MessageValidationResult> {
-    const lowerMessage = message.toLowerCase().trim();
-
-    // Check for inappropriate content
+    // Check for inappropriate content (severe violations only)
     for (const pattern of this.inappropriatePatterns) {
       if (pattern.test(message)) {
         return {
@@ -33,12 +30,12 @@ export class ContentFilter {
           severity: 'high',
           reason: 'inappropriate_language',
           suggestedResponse:
-            "I understand you might be frustrated, but let's keep our conversation professional and focused on improving your content.",
+            "I understand you might be feeling frustrated, but let's keep our conversation professional and focused on how I can help you best! 😊",
         };
       }
     }
 
-    // Check for spam/nonsense
+    // Check for spam/nonsense (more lenient)
     for (const pattern of this.spamPatterns) {
       if (pattern.test(message)) {
         return {
@@ -46,23 +43,44 @@ export class ContentFilter {
           severity: 'low',
           reason: 'unclear_message',
           suggestedResponse:
-            "I'd love to help you with your content! Could you please provide more details about what you'd like to discuss or improve?",
+            "I'd love to help you! Could you please provide a bit more detail about what you'd like to discuss or learn about?",
         };
       }
     }
 
-    // Check message length and coherence
-    if (message.length < 3) {
+    // Check message length (very minimal threshold)
+    if (message.length < 2) {
       return {
         isAppropriate: false,
         severity: 'low',
         reason: 'too_short',
         suggestedResponse:
-          "I'm here to help you optimize your content! Please let me know what specific aspect you'd like to work on.",
+          "I'm here to help with any questions you have! What would you like to know about?",
       };
     }
 
-    // Check if message is content-related
+    // REMOVED: Off-topic content filtering - now we accept all topics!
+    // The AI should be able to discuss anything, not just content-related topics
+
+    return {
+      isAppropriate: true,
+      severity: 'low',
+    };
+  }
+
+  // Helper method to check if content is spam-like (very basic)
+  static isLikelySpam(message: string): boolean {
+    const spamIndicators = [
+      /(.)\1{15,}/g, // Excessive character repetition
+      /^[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]*$/g, // Only special characters
+      /^\d+$/g, // Only numbers
+    ];
+
+    return spamIndicators.some((pattern) => pattern.test(message));
+  }
+
+  // Helper method for content relevance (but doesn't block anymore)
+  static getContentRelevanceScore(message: string): number {
     const contentKeywords = [
       'content',
       'post',
@@ -73,24 +91,15 @@ export class ContentFilter {
       'platform',
       'strategy',
       'performance',
+      'marketing',
+      'social media',
     ];
-    const hasContentContext = contentKeywords.some((keyword) =>
+
+    const lowerMessage = message.toLowerCase();
+    const matches = contentKeywords.filter((keyword) =>
       lowerMessage.includes(keyword),
     );
 
-    if (!hasContentContext && message.length > 10) {
-      return {
-        isAppropriate: false,
-        severity: 'medium',
-        reason: 'off_topic',
-        suggestedResponse:
-          "I'm specifically here to help you with your content optimization and improvement. Let's focus on how we can make your content more engaging and effective!",
-      };
-    }
-
-    return {
-      isAppropriate: true,
-      severity: 'low',
-    };
+    return matches.length / contentKeywords.length; // Returns 0-1 score
   }
 }

@@ -5,100 +5,206 @@ export class SuggestionGenerator {
     userMessage: string,
     context: ChatContext,
   ): string[] {
-    const suggestions = [];
     const lowerMessage = userMessage.toLowerCase();
+
+    // Check if the message is content-related
+    if (this.isContentRelatedMessage(lowerMessage)) {
+      return this.generateContentSpecificSuggestions(lowerMessage, context);
+    } else {
+      return this.generateGeneralSuggestions(userMessage, lowerMessage);
+    }
+  }
+
+  private static isContentRelatedMessage(message: string): boolean {
+    const contentKeywords = [
+      'optimize',
+      'content',
+      'post',
+      'engagement',
+      'audience',
+      'platform',
+      'hashtags',
+      'schedule',
+      'performance',
+      'analytics',
+      'reach',
+      'views',
+      'followers',
+      'likes',
+      'shares',
+      'comments',
+      'strategy',
+      'marketing',
+    ];
+    return contentKeywords.some((keyword) => message.includes(keyword));
+  }
+
+  private static generateContentSpecificSuggestions(
+    lowerMessage: string,
+    context: ChatContext,
+  ): string[] {
+    const suggestions = [];
 
     if (lowerMessage.includes('optimize')) {
       suggestions.push(
         `What are the best ${context.contentPlatform?.join(
           '/',
         )} optimization techniques?`,
-        'How can I improve engagement rates?',
+        'How can I improve my engagement rates?',
         'What content format works best for my audience?',
       );
     } else if (lowerMessage.includes('engagement')) {
       suggestions.push(
         'What call-to-action should I use?',
         'How can I encourage more comments and shares?',
-        'What posting frequency is optimal?',
+        'What hashtags will boost my reach?',
       );
-    } else if (
-      lowerMessage.includes('hashtag') ||
-      lowerMessage.includes('tag')
-    ) {
+    } else if (lowerMessage.includes('schedule')) {
       suggestions.push(
-        'How many hashtags should I use?',
-        'What are trending hashtags in my niche?',
-        'Should I create a branded hashtag?',
+        'When is the best time to post for my audience?',
+        'How often should I publish new content?',
+        'Should I create a content calendar?',
+      );
+    } else if (lowerMessage.includes('analytics')) {
+      suggestions.push(
+        'Which metrics should I focus on?',
+        'How do I interpret my performance data?',
+        'What tools can help me track my success?',
       );
     } else {
+      // General content suggestions
       suggestions.push(
-        `How can I make this ${context.contentType} more engaging?`,
-        `What's working well in ${context.contentPlatform?.join(
-          '/',
-        )} right now?`,
-        'Can you suggest improvements for better reach?',
-        'What metrics should I track for this content?',
+        'How can I make my content more engaging?',
+        'What trends should I incorporate?',
+        'How do I grow my audience organically?',
       );
     }
 
     return suggestions.slice(0, 3);
   }
 
-  static generateBasicSuggestions(userMessage: string): string[] {
-    const lowerMessage = userMessage.toLowerCase();
-
-    if (lowerMessage.includes('optimize')) {
+  private static generateGeneralSuggestions(
+    originalMessage: string,
+    lowerMessage: string,
+  ): string[] {
+    // Check for Khronos/platform questions first
+    if (this.isKhronosRelated(lowerMessage)) {
       return [
-        'How can I improve engagement?',
-        'What are the best posting times?',
-        'Can you suggest hashtags?',
+        'What specific features of Khronos interest you most?',
+        'Would you like to know about pricing and plans?',
+        'Are you interested in the AI optimization capabilities?',
+        'Would you like a demo or walkthrough of the platform?',
       ];
-    } else if (lowerMessage.includes('content')) {
+    }
+
+    // Check for specific topics and provide relevant follow-ups
+    if (lowerMessage.includes('trend')) {
       return [
-        'Generate variations of this content',
-        'Optimize for different platforms',
-        'Create a content calendar',
+        'What industries are you most interested in tracking?',
+        'Are you looking for global or local trending topics?',
+        'Would you like tips on how to leverage these trends?',
+      ];
+    } else if (lowerMessage.includes('nigeria')) {
+      return [
+        'What specific aspects of Nigerian trends interest you?',
+        'Are you focusing on a particular industry or demographic?',
+        'Would you like insights on Nigerian consumer behavior?',
+      ];
+    } else if (
+      lowerMessage.includes('business') ||
+      lowerMessage.includes('startup')
+    ) {
+      return [
+        'What stage is your business at currently?',
+        'What are your biggest business challenges right now?',
+        'Are you looking for growth strategies or operational advice?',
+      ];
+    } else if (
+      lowerMessage.includes('career') ||
+      lowerMessage.includes('job')
+    ) {
+      return [
+        'What career goals are you working towards?',
+        'Are you looking to switch industries or advance in your current field?',
+        'Would you like tips on skill development or networking?',
+      ];
+    } else if (
+      lowerMessage.includes('learn') ||
+      lowerMessage.includes('education')
+    ) {
+      return [
+        'What subject area interests you most?',
+        'Are you looking for formal education or self-learning resources?',
+        'What learning style works best for you?',
       ];
     } else {
+      // Completely general follow-up questions
       return [
-        'Tell me more about this content',
-        'How can I improve it?',
-        'What platforms work best?',
+        'What aspects of this topic are you most curious about?',
+        'Are you looking for practical advice or general information?',
+        'Would you like me to dive deeper into any specific area?',
       ];
     }
   }
 
-  static generateConversationStarters(content: any): string[] {
-    const starters = [];
+  // Helper method to detect Khronos-related questions
+  private static isKhronosRelated(message: string): boolean {
+    const khronosKeywords = [
+      'khronos',
+      'this platform',
+      'this project',
+      'this app',
+      'this tool',
+      'platform features',
+      'about this system',
+      'what does khronos do',
+    ];
+    return khronosKeywords.some((keyword) => message.includes(keyword));
+  }
 
-    starters.push(
-      `How can I optimize "${content.title}" for better ${content.platform.join(
-        ' and ',
-      )} performance?`,
-      `What creative ideas do you have to enhance "${content.title}"?`,
-      `What's the best strategy for promoting "${
-        content.title
-      }" on ${content.platform.join(' and ')}?`,
-      `Can you analyze the potential performance of "${content.title}"?`,
-    );
+  static generateBasicSuggestions(userMessage: string): string[] {
+    const lowerMessage = userMessage.toLowerCase();
 
-    if (content.type === 'social') {
-      starters.push(
-        `What hashtags would work best for this ${content.platform.join(
-          '/',
-        )} post?`,
-        `When is the optimal time to post this content?`,
-      );
+    if (lowerMessage.includes('help')) {
+      return [
+        'What specific topic can I assist you with?',
+        'Are you looking for advice on content or something else?',
+        'What challenges are you facing that I can help solve?',
+      ];
+    } else if (lowerMessage.includes('how')) {
+      return [
+        'Would you like a step-by-step guide?',
+        'Are you looking for beginner or advanced tips?',
+        'What have you already tried?',
+      ];
+    } else {
+      return [
+        'What would you like to explore further about this topic?',
+        'Can I help you with any related questions?',
+        'Is there a specific aspect you want to focus on?',
+      ];
+    }
+  }
+
+  static generateConversationStarters(content?: any): string[] {
+    const contentStarters = [
+      'How can I optimize this content for better engagement?',
+      'What platforms would work best for this content?',
+      'Any ideas for improving this content?',
+      'How can I analyze the performance of this content?',
+    ];
+
+    const generalStarters = [
+      "What's trending in your industry right now?",
+      'What topics are you most curious about today?',
+      "Any challenges you're facing that I can help with?",
+      'What would you like to learn or discuss?',
+    ];
+
+    if (content) {
+      return [...contentStarters, ...generalStarters];
     }
 
-    if (content.type === 'article' || content.type === 'blog_post') {
-      starters.push(
-        `How can I improve the SEO of this article?`,
-        `What's the best way to promote this article across platforms?`,
-      );
-    }
-
-    return starters.slice(0, 4);
+    return generalStarters;
   }
 }

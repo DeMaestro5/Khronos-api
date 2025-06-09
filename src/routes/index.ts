@@ -14,6 +14,7 @@ import content from './content';
 import llm from './llm';
 import calendar from './calendar';
 import chat from './chat';
+import analytics from './analytics';
 
 const router = express.Router();
 
@@ -35,5 +36,6 @@ router.use('/api/v1/content', content);
 router.use('/api/v1/llm', llm);
 router.use('/api/v1/calendar', calendar);
 router.use('/api/v1/chat', chat);
+router.use('/api/v1/analytics', analytics);
 
 export default router;

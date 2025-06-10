@@ -96,6 +96,10 @@ export default interface Content {
   aiGenerated?: boolean;
   contentIdeas?: ContentIdea[];
   optimizedContent?: Record<string, string>; // platform -> optimized content
+
+  // Store actual platform-specific post/video IDs for analytics
+  platformPostIds?: Record<string, string>; // platform -> actual post ID (e.g., YouTube video ID)
+
   engagement?: {
     likes?: number;
     shares?: number;
@@ -401,6 +405,12 @@ const schema = new Schema<Content>(
         type: Schema.Types.Number,
         default: 0,
       },
+    },
+
+    // Store actual platform-specific post/video IDs for real analytics
+    platformPostIds: {
+      type: Schema.Types.Mixed,
+      default: {},
     },
     createdAt: {
       type: Schema.Types.Date,

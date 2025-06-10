@@ -2,6 +2,9 @@ import { Types } from 'mongoose';
 import { UnifiedLLMService, LLMProvider } from './llm.service';
 import Content from '../database/model/content';
 
+// Export Content model for use in other services
+export { Content };
+
 export interface EngagementMetrics {
   impressions: number;
   reach: number;

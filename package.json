@@ -31,7 +31,7 @@
     "@langchain/openai": "^0.5.10",
     "@langchain/pinecone": "^0.2.0",
     "@pinecone-database/pinecone": "^5.1.2",
-    "axios": "^1.6.5",
+    "axios": "^1.9.0",
     "bcrypt": "^5.1.1",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
@@ -48,6 +48,7 @@
     "openai": "^4.100.0",
     "qs": "^6.11.2",
     "redis": "^4.6.12",
+    "socket.io": "^4.8.1",
     "winston": "^3.11.0",
     "winston-daily-rotate-file": "^4.7.1"
   },

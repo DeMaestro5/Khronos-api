@@ -2,7 +2,7 @@ import { Types } from 'mongoose';
 import { OpenAI } from 'openai';
 import { config } from '../../config';
 import { Content } from '../content.service';
-import { AnalyticsMetrics } from '../analytics.service';
+import { AnalyticsMetrics } from '../../helpers/analytics/metrics.helper';
 
 export interface Tweet {
   _id: Types.ObjectId;
@@ -115,6 +115,7 @@ export class TwitterService {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async getTweetAnalytics(tweetId: string): Promise<AnalyticsMetrics> {
     try {
       // Add implementation logic to fetch tweet analytics from Twitter
@@ -134,6 +135,7 @@ export class TwitterService {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async getAccountInsights(dateRange: { start: Date; end: Date }): Promise<{
     followers: number;
     following: number;
@@ -156,9 +158,10 @@ export class TwitterService {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async optimizeTweetTime(content: Content): Promise<Date[]> {
     try {
-      const response = await this.openai.chat.completions.create({
+      await this.openai.chat.completions.create({
         model: 'gpt-4',
         messages: [
           {

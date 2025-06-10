@@ -2,7 +2,7 @@ import { Types } from 'mongoose';
 import { OpenAI } from 'openai';
 import { config } from '../../config';
 import { Content } from '../content.service';
-import { AnalyticsMetrics } from '../analytics.service';
+import { AnalyticsMetrics } from '../../helpers/analytics/metrics.helper';
 
 export interface FacebookPost {
   _id: Types.ObjectId;
@@ -112,6 +112,7 @@ export class FacebookService {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async getPostAnalytics(postId: string): Promise<AnalyticsMetrics> {
     try {
       // Add implementation logic to fetch post analytics from Facebook
@@ -131,6 +132,7 @@ export class FacebookService {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async getPageInsights(dateRange: { start: Date; end: Date }): Promise<{
     pageLikes: number;
     pageReach: number;
@@ -151,9 +153,10 @@ export class FacebookService {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async optimizePostTime(content: Content): Promise<Date[]> {
     try {
-      const response = await this.openai.chat.completions.create({
+      await this.openai.chat.completions.create({
         model: 'gpt-4',
         messages: [
           {

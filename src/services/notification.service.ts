@@ -1,33 +1,12 @@
 import { Types } from 'mongoose';
 import { UnifiedLLMService, LLMProvider } from './llm.service';
-
-export interface Notification {
-  _id: Types.ObjectId;
-  userId: Types.ObjectId;
-  type: 'schedule' | 'performance' | 'trend' | 'system';
-  title: string;
-  message: string;
-  priority: 'low' | 'medium' | 'high';
-  status: 'unread' | 'read';
-  data?: Record<string, any>;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface NotificationPreferences {
-  userId: Types.ObjectId;
-  email: boolean;
-  push: boolean;
-  inApp: boolean;
-  scheduleNotifications: boolean;
-  performanceAlerts: boolean;
-  trendUpdates: boolean;
-  systemUpdates: boolean;
-  quietHours?: {
-    start: string;
-    end: string;
-  };
-}
+import NotificationRepo from '../database/repository/NotificationRepo';
+import Notification, {
+  NotificationType,
+  NotificationPriority,
+  NotificationStatus,
+} from '../database/model/Notification';
+import NotificationSettings from '../database/model/NotificationSettings';
 
 export class NotificationService {
   private llmService: UnifiedLLMService;
@@ -39,10 +18,10 @@ export class NotificationService {
 
   async createNotification(
     userId: Types.ObjectId,
-    type: Notification['type'],
+    type: NotificationType,
     title: string,
     message: string,
-    priority: Notification['priority'] = 'medium',
+    priority: NotificationPriority = NotificationPriority.MEDIUM,
     data?: Record<string, any>,
   ): Promise<Notification> {
     const notification: Notification = {
@@ -52,14 +31,13 @@ export class NotificationService {
       title,
       message,
       priority,
-      status: 'unread',
+      status: NotificationStatus.UNREAD,
       data,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
 
-    // Add implementation logic to save notification
-    return notification;
+    return await NotificationRepo.create(notification);
   }
 
   async generatePerformanceAlert(
@@ -77,11 +55,11 @@ export class NotificationService {
       return {
         _id: new Types.ObjectId(),
         userId: new Types.ObjectId(), // Replace with actual user ID
-        type: 'performance',
+        type: NotificationType.PERFORMANCE,
         title: 'Performance Alert',
         message: alert,
-        priority: 'high',
-        status: 'unread',
+        priority: NotificationPriority.HIGH,
+        status: NotificationStatus.UNREAD,
         data: { contentId, metrics, threshold },
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -107,11 +85,11 @@ export class NotificationService {
       return {
         _id: new Types.ObjectId(),
         userId: new Types.ObjectId(), // Replace with actual user ID
-        type: 'trend',
+        type: NotificationType.TREND,
         title: 'Trend Alert',
         message: alert,
-        priority: 'medium',
-        status: 'unread',
+        priority: NotificationPriority.MEDIUM,
+        status: NotificationStatus.UNREAD,
         data: { trend, platform, growth },
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -137,11 +115,11 @@ export class NotificationService {
       return {
         _id: new Types.ObjectId(),
         userId: new Types.ObjectId(), // Replace with actual user ID
-        type: 'schedule',
+        type: NotificationType.SCHEDULE,
         title: 'Schedule Reminder',
         message: reminder,
-        priority: 'high',
-        status: 'unread',
+        priority: NotificationPriority.HIGH,
+        status: NotificationStatus.UNREAD,
         data: { contentId, scheduledTime, platform },
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -155,31 +133,69 @@ export class NotificationService {
   async getUserNotifications(
     userId: Types.ObjectId,
     filters?: {
-      type?: Notification['type'];
-      status?: Notification['status'];
-      priority?: Notification['priority'];
+      type?: NotificationType;
+      status?: NotificationStatus;
+      priority?: NotificationPriority;
     },
-  ): Promise<Notification[]> {
-    // Add implementation logic to fetch user notifications4
-    console.log('getUserNotifications', userId, filters);
-    return [];
+    page: number = 1,
+    limit: number = 20,
+  ): Promise<{
+    notifications: Notification[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    const notifications = await NotificationRepo.findByUserId(
+      userId,
+      filters,
+      page,
+      limit,
+    );
+    const total = await NotificationRepo.countByUserId(userId, filters);
+
+    return {
+      notifications,
+      total,
+      page,
+      limit,
+    };
   }
 
   async updateNotificationStatus(
     notificationId: Types.ObjectId,
-    status: Notification['status'],
+    status: NotificationStatus,
   ): Promise<Notification> {
-    // Add implementation logic to update notification status
-    console.log('updateNotificationStatus', notificationId, status);
-    throw new Error('Not implemented');
+    const notification = await NotificationRepo.updateStatus(
+      notificationId,
+      status,
+    );
+    if (!notification) {
+      throw new Error('Notification not found');
+    }
+    return notification;
   }
 
-  async updateNotificationPreferences(
+  async markAllAsRead(userId: Types.ObjectId): Promise<void> {
+    await NotificationRepo.markAllAsRead(userId);
+  }
+
+  async getNotificationSettings(
     userId: Types.ObjectId,
-    preferences: Partial<NotificationPreferences>,
-  ): Promise<NotificationPreferences> {
-    // Add implementation logic to update notification preferences
-    console.log('updateNotificationPreferences', userId, preferences);
-    throw new Error('Not implemented');
+  ): Promise<NotificationSettings | null> {
+    return await NotificationRepo.findSettingsByUserId(userId);
+  }
+
+  async updateNotificationSettings(
+    userId: Types.ObjectId,
+    settings: Partial<NotificationSettings>,
+  ): Promise<NotificationSettings> {
+    const updatedSettings = await NotificationRepo.updateSettings(
+      userId,
+      settings,
+    );
+    if (!updatedSettings) {
+      throw new Error('Failed to update notification settings');
+    }
+    return updatedSettings;
   }
 }

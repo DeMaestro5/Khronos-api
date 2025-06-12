@@ -15,6 +15,7 @@ import llm from './llm';
 import calendar from './calendar';
 import chat from './chat';
 import analytics from './analytics';
+import notifications from './notifications';
 
 const router = express.Router();
 
@@ -37,5 +38,6 @@ router.use('/api/v1/llm', llm);
 router.use('/api/v1/calendar', calendar);
 router.use('/api/v1/chat', chat);
 router.use('/api/v1/analytics', analytics);
+router.use('/api/v1/notifications', notifications);
 
 export default router;

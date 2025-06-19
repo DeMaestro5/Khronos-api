@@ -16,6 +16,7 @@ import calendar from './calendar';
 import chat from './chat';
 import analytics from './analytics';
 import notifications from './notifications';
+import trend from './trend';
 
 const router = express.Router();
 
@@ -39,5 +40,6 @@ router.use('/api/v1/calendar', calendar);
 router.use('/api/v1/chat', chat);
 router.use('/api/v1/analytics', analytics);
 router.use('/api/v1/notifications', notifications);
+router.use('/api/v1/trends', trend);
 
 export default router;

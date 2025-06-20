@@ -7,7 +7,7 @@ import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
 import { config } from '../config';
 import Logger from '../core/Logger';
 import { Content } from './content.service';
-import { AnalyticsMetrics } from './analytics.service';
+import { AnalyticsMetrics } from '../helpers/analytics';
 import { Types } from 'mongoose';
 
 class RAGService {

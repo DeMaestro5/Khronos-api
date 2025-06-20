@@ -874,4 +874,753 @@ export class ContentService {
       ],
     };
   }
+
+  /**
+   * Generate comprehensive AI suggestions for content creation form
+   * This method auto-suggests all form fields: title, description, content type, platform, tags, and priority
+   * @param prompt - Brief user input or topic
+   * @param context - Optional context about target audience, industry, etc.
+   * @returns Complete content suggestion object
+   */
+  async generateAISuggest(
+    prompt: string,
+    context?: {
+      targetAudience?: string;
+      industry?: string;
+      preferredPlatforms?: string[];
+      contentGoal?: string; // 'engagement', 'education', 'sales', 'brand_awareness'
+    },
+  ): Promise<{
+    title: string;
+    description: string;
+    contentType: Content['type'];
+    platforms: string[];
+    tags: string[];
+    priority: 'low' | 'medium' | 'high' | 'critical';
+    aiConfidence: number;
+    reasoning: string;
+    alternatives: {
+      titles: string[];
+      contentTypes: Content['type'][];
+      platformCombinations: string[][];
+    };
+  }> {
+    try {
+      // Create comprehensive prompt for AI suggestion
+      const suggestPrompt = this.buildAISuggestPrompt(prompt, context);
+
+      // Get AI suggestions using LLM service
+      const aiResponse =
+        await this.llmService.generateChatResponse(suggestPrompt);
+
+      // Parse the AI response
+      const suggestions = await this.parseAISuggestResponse(
+        aiResponse,
+        prompt,
+        context,
+      );
+
+      return suggestions;
+    } catch (error) {
+      console.error('Error generating AI suggestions:', error);
+      // Return fallback suggestions
+      return this.generateFallbackAISuggestions(prompt, context);
+    }
+  }
+
+  /**
+   * Build comprehensive prompt for AI suggestion generation
+   */
+  private buildAISuggestPrompt(prompt: string, context?: any): string {
+    const contextInfo = context
+      ? `
+Target Audience: ${context.targetAudience || 'General audience'}
+Industry: ${context.industry || 'General'}
+Preferred Platforms: ${
+          context.preferredPlatforms?.join(', ') || 'Not specified'
+        }
+Content Goal: ${context.contentGoal || 'Engagement'}
+`
+      : '';
+
+    return `You are an expert content strategist. Based on the user's input, suggest comprehensive content creation details.
+
+User Input: "${prompt}"
+${contextInfo}
+
+Provide suggestions in the following JSON format:
+{
+  "title": "Engaging and SEO-optimized title (max 100 characters)",
+  "description": "Detailed description explaining what the content will cover (150-300 words)",
+  "contentType": "article|video|social|podcast|blog_post|newsletter",
+  "platforms": ["platform1", "platform2", "platform3"],
+  "tags": ["tag1", "tag2", "tag3", "tag4", "tag5"],
+  "priority": "low|medium|high|critical",
+  "aiConfidence": 0.85,
+  "reasoning": "Brief explanation of why these suggestions fit the user's input",
+  "alternatives": {
+    "titles": ["Alternative title 1", "Alternative title 2", "Alternative title 3"],
+    "contentTypes": ["alternative_type1", "alternative_type2"],
+    "platformCombinations": [["platform_set_1"], ["platform_set_2"]]
+  }
+}
+
+Content Type Guidelines:
+- article: Long-form educational/informational content
+- video: Visual tutorials, demos, vlogs
+- social: Short-form posts for social media
+- podcast: Audio content, interviews, discussions
+- blog_post: Casual, personal blog content
+- newsletter: Email marketing content
+
+Platform Options:
+- linkedin: B2B professional content
+- twitter: Real-time updates, news, discussions
+- instagram: Visual content, lifestyle, behind-the-scenes
+- youtube: Video tutorials, entertainment
+- tiktok: Short-form video content
+- facebook: Community engagement, events
+- medium: Thought leadership articles
+- email: Newsletter, direct communication
+
+Priority Guidelines:
+- low: Evergreen content, no time pressure
+- medium: Regular content schedule
+- high: Trending topics, time-sensitive
+- critical: Breaking news, urgent announcements
+
+Make suggestions relevant to the user's input and context. Ensure the content type matches the suggested platforms.`;
+  }
+
+  /**
+   * Parse AI response and extract suggestions
+   */
+  private async parseAISuggestResponse(
+    aiResponse: string,
+    originalPrompt: string,
+    context?: any,
+  ): Promise<any> {
+    try {
+      // Try to extract JSON from AI response
+      const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+
+        // Validate and clean the response
+        return {
+          title: this.validateTitle(parsed.title),
+          description: this.validateDescription(parsed.description),
+          contentType: this.validateContentType(parsed.contentType),
+          platforms: this.validatePlatforms(parsed.platforms),
+          tags: this.validateTags(parsed.tags),
+          priority: this.validatePriority(parsed.priority),
+          aiConfidence: Math.min(
+            Math.max(parsed.aiConfidence || 0.7, 0.1),
+            1.0,
+          ),
+          reasoning:
+            parsed.reasoning || 'AI-generated suggestions based on your input',
+          alternatives: {
+            titles: (parsed.alternatives?.titles || []).slice(0, 3),
+            contentTypes: (parsed.alternatives?.contentTypes || []).slice(0, 2),
+            platformCombinations: (
+              parsed.alternatives?.platformCombinations || []
+            ).slice(0, 2),
+          },
+        };
+      }
+    } catch (error) {
+      console.error('Error parsing AI suggest response:', error);
+    }
+
+    // Fallback if parsing fails
+    return this.generateFallbackAISuggestions(originalPrompt, context);
+  }
+
+  /**
+   * Generate fallback suggestions when AI fails
+   */
+  private generateFallbackAISuggestions(prompt: string, context?: any): any {
+    const cleanPrompt = prompt.toLowerCase().trim();
+
+    // Determine content type based on keywords
+    let contentType: Content['type'] = 'article';
+    let platforms = ['linkedin', 'twitter'];
+    let priority: 'low' | 'medium' | 'high' | 'critical' = 'medium';
+
+    if (
+      cleanPrompt.includes('video') ||
+      cleanPrompt.includes('tutorial') ||
+      cleanPrompt.includes('demo')
+    ) {
+      contentType = 'video';
+      platforms = ['youtube', 'instagram', 'tiktok'];
+    } else if (
+      cleanPrompt.includes('social') ||
+      cleanPrompt.includes('post') ||
+      cleanPrompt.includes('update')
+    ) {
+      contentType = 'social';
+      platforms = ['twitter', 'instagram', 'linkedin'];
+    } else if (
+      cleanPrompt.includes('podcast') ||
+      cleanPrompt.includes('interview') ||
+      cleanPrompt.includes('audio')
+    ) {
+      contentType = 'podcast';
+      platforms = ['spotify', 'apple_podcasts'];
+    } else if (
+      cleanPrompt.includes('newsletter') ||
+      cleanPrompt.includes('email')
+    ) {
+      contentType = 'newsletter';
+      platforms = ['email'];
+    } else if (cleanPrompt.includes('blog')) {
+      contentType = 'blog_post';
+      platforms = ['medium', 'personal_blog'];
+    }
+
+    // Determine priority based on keywords
+    if (
+      cleanPrompt.includes('urgent') ||
+      cleanPrompt.includes('breaking') ||
+      cleanPrompt.includes('now')
+    ) {
+      priority = 'critical';
+    } else if (
+      cleanPrompt.includes('trending') ||
+      cleanPrompt.includes('important') ||
+      cleanPrompt.includes('soon')
+    ) {
+      priority = 'high';
+    } else if (
+      cleanPrompt.includes('later') ||
+      cleanPrompt.includes('someday') ||
+      cleanPrompt.includes('eventually')
+    ) {
+      priority = 'low';
+    }
+
+    // Use context if provided
+    if (context?.preferredPlatforms) {
+      platforms = context.preferredPlatforms.slice(0, 3);
+    }
+
+    // Generate basic tags
+    const tags = this.generateBasicTags(cleanPrompt);
+
+    return {
+      title: this.generateFallbackTitle(prompt),
+      description: this.generateFallbackDescription(prompt, contentType),
+      contentType,
+      platforms,
+      tags,
+      priority,
+      aiConfidence: 0.6,
+      reasoning: 'Fallback suggestions generated based on keyword analysis',
+      alternatives: {
+        titles: [
+          `${prompt} - Complete Guide`,
+          `Everything You Need to Know About ${prompt}`,
+          `${prompt}: Tips and Best Practices`,
+        ],
+        contentTypes:
+          contentType === 'article'
+            ? ['blog_post', 'video']
+            : ['article', 'social'],
+        platformCombinations: [
+          ['linkedin', 'twitter'],
+          ['instagram', 'tiktok'],
+          ['youtube', 'medium'],
+        ],
+      },
+    };
+  }
+
+  // Validation helper methods
+  private validateTitle(title: string): string {
+    if (!title || typeof title !== 'string') return 'Untitled Content';
+    return title.substring(0, 100).trim();
+  }
+
+  private validateDescription(description: string): string {
+    if (!description || typeof description !== 'string')
+      return 'Content description will be generated based on your topic.';
+    return description.substring(0, 1000).trim();
+  }
+
+  private validateContentType(type: string): Content['type'] {
+    const validTypes: Content['type'][] = [
+      'article',
+      'video',
+      'social',
+      'podcast',
+      'blog_post',
+      'newsletter',
+    ];
+    return validTypes.includes(type as Content['type'])
+      ? (type as Content['type'])
+      : 'article';
+  }
+
+  private validatePlatforms(platforms: any): string[] {
+    if (!Array.isArray(platforms)) return ['linkedin', 'twitter'];
+    const validPlatforms = [
+      'linkedin',
+      'twitter',
+      'instagram',
+      'youtube',
+      'tiktok',
+      'facebook',
+      'medium',
+      'email',
+    ];
+    return platforms
+      .filter((p) => typeof p === 'string' && validPlatforms.includes(p))
+      .slice(0, 4);
+  }
+
+  private validateTags(tags: any): string[] {
+    if (!Array.isArray(tags)) return [];
+    return tags
+      .filter((t) => typeof t === 'string' && t.length > 0)
+      .slice(0, 8);
+  }
+
+  private validatePriority(
+    priority: string,
+  ): 'low' | 'medium' | 'high' | 'critical' {
+    const validPriorities = ['low', 'medium', 'high', 'critical'];
+    return validPriorities.includes(priority) ? (priority as any) : 'medium';
+  }
+
+  private generateBasicTags(prompt: string): string[] {
+    const words = prompt.toLowerCase().split(/\s+/);
+    const tags = words
+      .filter((word) => word.length > 3)
+      .filter(
+        (word) =>
+          ![
+            'this',
+            'that',
+            'with',
+            'from',
+            'they',
+            'were',
+            'been',
+            'have',
+            'your',
+            'what',
+            'when',
+            'where',
+            'will',
+          ].includes(word),
+      )
+      .slice(0, 5);
+
+    return tags.length > 0 ? tags : ['content', 'marketing', 'business'];
+  }
+
+  private generateFallbackTitle(prompt: string): string {
+    const cleanPrompt = prompt.charAt(0).toUpperCase() + prompt.slice(1);
+    return `${cleanPrompt}: A Comprehensive Guide`;
+  }
+
+  private generateFallbackDescription(
+    prompt: string,
+    contentType: Content['type'],
+  ): string {
+    const typeDescriptions = {
+      article: 'In-depth article covering',
+      video: 'Engaging video tutorial about',
+      social: 'Social media content discussing',
+      podcast: 'Podcast episode exploring',
+      blog_post: 'Blog post diving into',
+      newsletter: 'Newsletter edition featuring',
+    };
+
+    return `${typeDescriptions[contentType]} ${prompt}. This content will provide valuable insights, practical tips, and actionable strategies for your audience. Perfect for engaging your community and establishing thought leadership in your field.`;
+  }
+
+  /**
+   * Generate suggestions feed for the suggestions tab
+   * @param userId - User ID for personalized suggestions
+   * @param options - Feed generation options
+   */
+  async generateSuggestionsFeed(
+    userId: Types.ObjectId,
+    options: {
+      limit?: number;
+      category?: string;
+      forceRefresh?: boolean;
+    } = {},
+  ): Promise<any[]> {
+    try {
+      const {
+        limit = 10,
+        category: _category,
+        forceRefresh: _forceRefresh = false,
+      } = options;
+
+      // Generate trending topics and content ideas
+      const trendingTopics = [
+        'AI tools for content creators',
+        'Social media trends 2025',
+        'Remote work productivity',
+        'Digital marketing strategies',
+        'Personal branding tips',
+        'Video content creation',
+        'Email marketing automation',
+        'SEO best practices',
+        'Influencer marketing',
+        'Content monetization',
+      ];
+
+      const suggestions = [];
+
+      for (let i = 0; i < Math.min(limit, trendingTopics.length); i++) {
+        const topic = trendingTopics[i];
+
+        try {
+          // Generate AI suggestion for each topic
+          const suggestion = await this.generateAISuggest(topic, {
+            targetAudience: 'Content creators and marketers',
+            contentGoal: 'engagement',
+          });
+
+          suggestions.push({
+            id: `suggestion-${Date.now()}-${i}`,
+            title: suggestion.title,
+            description: suggestion.description,
+            contentType: suggestion.contentType,
+            platforms: suggestion.platforms,
+            tags: suggestion.tags,
+            priority: suggestion.priority,
+            trending: Math.random() > 0.5, // Random trending status
+            category: this.categorizeTopic(topic),
+            estimatedEngagement: this.estimateEngagement(
+              suggestion.contentType,
+              suggestion.platforms,
+            ),
+            difficulty: this.determineDifficulty(suggestion.contentType),
+            timeToCreate: this.estimateTimeToCreate(suggestion.contentType),
+            reasoning: suggestion.reasoning,
+            aiConfidence: suggestion.aiConfidence,
+            createdAt: new Date(),
+          });
+        } catch (error) {
+          console.warn(
+            `Failed to generate suggestion for topic: ${topic}`,
+            error,
+          );
+          // Add fallback suggestion
+          suggestions.push(this.generateFallbackFeedSuggestion(topic, i));
+        }
+      }
+
+      return suggestions.slice(0, limit);
+    } catch (error) {
+      console.error('Error generating suggestions feed:', error);
+      // Return fallback suggestions
+      return this.generateFallbackSuggestionsFeed(options.limit || 10);
+    }
+  }
+
+  /**
+   * Convert a suggestion from the feed to form-ready data
+   * @param suggestionId - ID of the suggestion from the feed
+   * @param customizations - Any user customizations
+   * @param userId - User ID
+   */
+  async convertFeedSuggestionToForm(
+    suggestionId: string,
+    customizations: any = {},
+    _userId: Types.ObjectId, // Prefixed with underscore to indicate intentionally unused
+  ): Promise<any> {
+    try {
+      // For now, we'll create form data based on the suggestion ID and customizations
+      // In a real implementation, you might fetch the suggestion from a cache/database
+
+      console.log('Converting feed suggestion to form:', suggestionId);
+
+      // Extract basic info from suggestion ID or use customizations
+      const baseFormData: Record<string, any> = {
+        title: customizations.title || 'AI Generated Content Title',
+        description:
+          customizations.description ||
+          'AI generated description for your content',
+        type: customizations.type || 'article',
+        platform: customizations.platforms || ['linkedin', 'twitter'],
+        tags: customizations.tags || ['ai', 'content', 'marketing'],
+        priority: customizations.priority || 'medium',
+      };
+
+      // Apply any user-specific customizations
+      if (customizations) {
+        const allowedKeys = [
+          'title',
+          'description',
+          'type',
+          'platform',
+          'tags',
+          'priority',
+        ];
+        Object.keys(customizations).forEach((key) => {
+          if (customizations[key] !== undefined && allowedKeys.includes(key)) {
+            baseFormData[key] = customizations[key];
+          }
+        });
+      }
+
+      return baseFormData;
+    } catch (error) {
+      console.error('Error converting feed suggestion to form:', error);
+      throw new Error('Failed to convert suggestion to form data');
+    }
+  }
+
+  private categorizeTopic(topic: string): string {
+    const topicLower = topic.toLowerCase();
+
+    if (topicLower.includes('ai') || topicLower.includes('tool'))
+      return 'Technology';
+    if (topicLower.includes('social') || topicLower.includes('media'))
+      return 'Social Media';
+    if (topicLower.includes('marketing') || topicLower.includes('seo'))
+      return 'Marketing';
+    if (topicLower.includes('productivity') || topicLower.includes('remote'))
+      return 'Business';
+    if (topicLower.includes('video') || topicLower.includes('content'))
+      return 'Content Creation';
+
+    return 'General';
+  }
+
+  private estimateEngagement(
+    contentType: Content['type'],
+    platforms: string[],
+  ): string {
+    const engagementMap = {
+      video: 'Very High',
+      social: 'High',
+      article: 'Medium',
+      podcast: 'Medium',
+      blog_post: 'Medium',
+      newsletter: 'Low',
+    };
+
+    const platformBoost = platforms.some((p) =>
+      ['tiktok', 'instagram', 'youtube'].includes(p),
+    );
+    const baseEngagement = engagementMap[contentType] || 'Medium';
+
+    if (platformBoost && baseEngagement === 'Medium') return 'High';
+    return baseEngagement;
+  }
+
+  private determineDifficulty(contentType: Content['type']): string {
+    const difficultyMap = {
+      social: 'Beginner',
+      blog_post: 'Beginner',
+      article: 'Intermediate',
+      newsletter: 'Intermediate',
+      video: 'Advanced',
+      podcast: 'Advanced',
+    };
+
+    return difficultyMap[contentType] || 'Intermediate';
+  }
+
+  private estimateTimeToCreate(contentType: Content['type']): string {
+    const timeMap = {
+      social: '30 minutes',
+      blog_post: '1-2 hours',
+      article: '2-3 hours',
+      newsletter: '1-2 hours',
+      video: '3-5 hours',
+      podcast: '2-4 hours',
+    };
+
+    return timeMap[contentType] || '1-2 hours';
+  }
+
+  private generateFallbackFeedSuggestion(topic: string, index: number): any {
+    return {
+      id: `fallback-${Date.now()}-${index}`,
+      title: `${topic}: Complete Guide`,
+      description: `Comprehensive guide covering ${topic}. Learn the latest trends, best practices, and actionable strategies.`,
+      contentType: 'article',
+      platforms: ['linkedin', 'twitter'],
+      tags: topic
+        .toLowerCase()
+        .split(' ')
+        .filter((word) => word.length > 3)
+        .slice(0, 5),
+      priority: 'medium',
+      trending: false,
+      category: this.categorizeTopic(topic),
+      estimatedEngagement: 'Medium',
+      difficulty: 'Intermediate',
+      timeToCreate: '2-3 hours',
+      reasoning: 'Fallback suggestion generated from trending topic',
+      aiConfidence: 0.5,
+      createdAt: new Date(),
+    };
+  }
+
+  private generateFallbackSuggestionsFeed(limit: number): any[] {
+    const fallbackTopics = [
+      'AI Tools for Content Creators',
+      'Social Media Marketing Strategies',
+      'Remote Work Best Practices',
+      'Digital Marketing Trends',
+      'Content Creation Tips',
+    ];
+
+    return fallbackTopics
+      .slice(0, limit)
+      .map((topic, index) => this.generateFallbackFeedSuggestion(topic, index));
+  }
+
+  /**
+   * Generate a single optimized suggestion for form auto-fill
+   * @param userId - User ID for personalized suggestions
+   * @param options - Generation options
+   */
+  async generateFormFillSuggestion(
+    userId: Types.ObjectId,
+    options: {
+      category?: string;
+      seed?: string;
+    } = {},
+  ): Promise<any> {
+    try {
+      const { category, seed } = options;
+
+      // Generate trending topics pool based on category
+      const trendingTopics = this.getTrendingTopicsByCategory(category);
+
+      // Select a topic (use seed for consistent results if provided)
+      const selectedTopic = seed
+        ? trendingTopics[parseInt(seed) % trendingTopics.length]
+        : trendingTopics[Math.floor(Math.random() * trendingTopics.length)];
+
+      // Generate AI suggestion for the selected topic
+      const suggestion = await this.generateAISuggest(selectedTopic, {
+        targetAudience: 'Content creators and marketers',
+        contentGoal: 'engagement',
+      });
+
+      return {
+        id: `form-fill-${Date.now()}`,
+        title: suggestion.title,
+        description: suggestion.description,
+        contentType: suggestion.contentType,
+        platforms: suggestion.platforms,
+        tags: suggestion.tags,
+        priority: suggestion.priority,
+        category: this.categorizeTopic(selectedTopic),
+        trending: Math.random() > 0.3, // Higher chance of trending for form fills
+        reasoning: suggestion.reasoning,
+        aiConfidence: suggestion.aiConfidence,
+        createdAt: new Date(),
+      };
+    } catch (error) {
+      console.error('Error generating form fill suggestion:', error);
+      // Return smart fallback
+      return this.generateSmartFormFillFallback(options.category);
+    }
+  }
+
+  private getTrendingTopicsByCategory(category?: string): string[] {
+    const allTopics = {
+      Technology: [
+        'AI tools for content creators',
+        'Latest tech trends 2025',
+        'Digital transformation strategies',
+        'Automation in content creation',
+      ],
+      Marketing: [
+        'Social media marketing strategies',
+        'Email marketing best practices',
+        'Influencer marketing trends',
+        'Content marketing ROI',
+      ],
+      Business: [
+        'Remote work productivity',
+        'Team collaboration tools',
+        'Business automation',
+        'Startup growth strategies',
+      ],
+      'Content Creation': [
+        'Video content trends',
+        'Content planning strategies',
+        'Creator economy insights',
+        'Content distribution tactics',
+      ],
+    };
+
+    if (category && allTopics[category]) {
+      return allTopics[category];
+    }
+
+    // Return mix of all categories if no specific category
+    return [
+      ...allTopics.Technology,
+      ...allTopics.Marketing,
+      ...allTopics.Business,
+      ...allTopics['Content Creation'],
+    ];
+  }
+
+  private generateSmartFormFillFallback(category?: string): any {
+    const fallbackSuggestions = {
+      Technology: {
+        title: 'Essential AI Tools Every Content Creator Should Know',
+        description:
+          'Discover the most impactful AI tools that are transforming content creation workflows and boosting productivity',
+        contentType: 'article' as Content['type'],
+        platforms: ['linkedin', 'medium', 'twitter'],
+        tags: ['ai-tools', 'productivity', 'content-creation', 'technology'],
+        priority: 'high' as const,
+      },
+      Marketing: {
+        title: 'Social Media Marketing Strategies That Actually Work',
+        description:
+          'Proven social media marketing tactics that drive engagement, build community, and generate leads',
+        contentType: 'social' as Content['type'],
+        platforms: ['instagram', 'linkedin', 'twitter'],
+        tags: ['social-media', 'marketing', 'engagement', 'strategy'],
+        priority: 'high' as const,
+      },
+      Business: {
+        title: 'Remote Team Productivity: A Complete Guide',
+        description:
+          "Transform your remote team's productivity with proven strategies, tools, and management techniques",
+        contentType: 'video' as Content['type'],
+        platforms: ['youtube', 'linkedin'],
+        tags: ['remote-work', 'productivity', 'team-management', 'business'],
+        priority: 'medium' as const,
+      },
+    };
+
+    const fallbackData =
+      fallbackSuggestions[category as keyof typeof fallbackSuggestions] ||
+      fallbackSuggestions.Technology;
+
+    return {
+      id: `fallback-form-fill-${Date.now()}`,
+      title: fallbackData.title,
+      description: fallbackData.description,
+      contentType: fallbackData.contentType,
+      platforms: fallbackData.platforms,
+      tags: fallbackData.tags,
+      priority: fallbackData.priority,
+      category: category || 'Technology',
+      trending: false,
+      reasoning: 'Smart fallback suggestion based on popular content patterns',
+      aiConfidence: 0.7,
+      createdAt: new Date(),
+    };
+  }
 }

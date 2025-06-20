@@ -35,6 +35,53 @@ export default {
     limit: Joi.number().integer().min(1).max(20).default(5),
   }),
 
+  aiSuggest: Joi.object({
+    prompt: Joi.string().required().min(3).max(500).trim(),
+    context: Joi.object({
+      targetAudience: Joi.string().max(100),
+      industry: Joi.string().max(100),
+      preferredPlatforms: Joi.array()
+        .items(
+          Joi.string().valid(
+            'linkedin',
+            'twitter',
+            'instagram',
+            'youtube',
+            'tiktok',
+            'facebook',
+            'medium',
+            'email',
+          ),
+        )
+        .max(5),
+      contentGoal: Joi.string().valid(
+        'engagement',
+        'education',
+        'sales',
+        'brand_awareness',
+      ),
+    }).optional(),
+  }),
+
+  suggestFromFeed: Joi.object({
+    suggestionId: Joi.string().required(),
+    customizations: Joi.object({
+      title: Joi.string().max(200),
+      description: Joi.string().max(1000),
+      type: Joi.string().valid(
+        'article',
+        'video',
+        'social',
+        'podcast',
+        'blog_post',
+        'newsletter',
+      ),
+      platforms: Joi.array().items(Joi.string()).max(5),
+      tags: Joi.array().items(Joi.string()).max(10),
+      priority: Joi.string().valid('low', 'medium', 'high', 'critical'),
+    }).optional(),
+  }),
+
   patterns: Joi.object({
     platform: Joi.string().required(),
     contentType: Joi.string()

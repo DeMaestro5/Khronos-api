@@ -1256,11 +1256,8 @@ Make suggestions relevant to the user's input and context. Ensure the content ty
     } = {},
   ): Promise<any[]> {
     try {
-      const {
-        limit = 10,
-        category: _category,
-        forceRefresh: _forceRefresh = false,
-      } = options;
+      const { limit = 10 } = options;
+      // TODO: Implement category filtering and force refresh functionality
 
       // Generate trending topics and content ideas
       const trendingTopics = [
@@ -1335,13 +1332,18 @@ Make suggestions relevant to the user's input and context. Ensure the content ty
   async convertFeedSuggestionToForm(
     suggestionId: string,
     customizations: any = {},
-    _userId: Types.ObjectId, // Prefixed with underscore to indicate intentionally unused
+    userId: Types.ObjectId,
   ): Promise<any> {
     try {
       // For now, we'll create form data based on the suggestion ID and customizations
       // In a real implementation, you might fetch the suggestion from a cache/database
 
-      console.log('Converting feed suggestion to form:', suggestionId);
+      console.log(
+        'Converting feed suggestion to form:',
+        suggestionId,
+        'for user:',
+        userId,
+      );
 
       // Extract basic info from suggestion ID or use customizations
       const baseFormData: Record<string, any> = {
@@ -1533,7 +1535,7 @@ Make suggestions relevant to the user's input and context. Ensure the content ty
   }
 
   private getTrendingTopicsByCategory(category?: string): string[] {
-    const allTopics = {
+    const allTopics: Record<string, string[]> = {
       Technology: [
         'AI tools for content creators',
         'Latest tech trends 2025',

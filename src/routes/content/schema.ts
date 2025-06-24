@@ -340,4 +340,78 @@ export default {
       'object.xor':
         'Provide either scheduling object or scheduledDate, but not both',
     }),
+
+  // Schema for creating content from AI suggestions
+  createFromAI: Joi.object({
+    title: Joi.string().required().max(200),
+    type: Joi.string()
+      .valid('article', 'video', 'social', 'podcast', 'newsletter', 'blog_post')
+      .default('article'),
+    platform: Joi.array().items(Joi.string()).default(['linkedin', 'medium']),
+    tags: Joi.array().items(Joi.string()).default([]),
+
+    // Priority field for calendar event
+    priority: Joi.string()
+      .valid('low', 'medium', 'high', 'critical')
+      .default('medium'),
+
+    // Enhanced scheduling object for automatic calendar event creation
+    scheduling: Joi.object({
+      startDate: Joi.date().iso().required(),
+      endDate: Joi.date().iso().greater(Joi.ref('startDate')),
+      timezone: Joi.string().default('UTC'),
+      allDay: Joi.boolean().default(false),
+      autoPublish: Joi.boolean().default(false),
+      priority: Joi.string()
+        .valid('low', 'medium', 'high', 'critical')
+        .default('medium'),
+
+      // Cross-platform scheduling - different times for different platforms
+      platformSchedules: Joi.array().items(
+        Joi.object({
+          platform: Joi.string().required(),
+          scheduledDate: Joi.date().iso().required(),
+          customContent: Joi.string(), // Platform-specific optimized content
+          autoPublish: Joi.boolean().default(false),
+        }),
+      ),
+
+      // Recurrence for recurring content (like daily social posts)
+      recurrence: Joi.object({
+        frequency: Joi.string()
+          .valid('daily', 'weekly', 'monthly', 'yearly')
+          .required(),
+        interval: Joi.number().integer().min(1).default(1),
+        daysOfWeek: Joi.array().items(Joi.number().integer().min(0).max(6)), // For weekly recurrence
+        endDate: Joi.date().iso(),
+        occurrences: Joi.number().integer().min(1),
+      }),
+
+      // Reminders for content creators
+      reminders: Joi.array().items(
+        Joi.object({
+          type: Joi.string().valid('email', 'push', 'webhook').required(),
+          time: Joi.number().integer().min(0).required(), // minutes before start
+        }),
+      ),
+
+      // Publishing settings
+      publishSettings: Joi.object({
+        optimizeForEngagement: Joi.boolean().default(true),
+        crossPost: Joi.boolean().default(false),
+        includeHashtags: Joi.boolean().default(true),
+        mentionInfluencers: Joi.boolean().default(false),
+      }),
+
+      // AI optimization preferences
+      aiOptimization: Joi.object({
+        useOptimalTimes: Joi.boolean().default(true),
+        adjustForAudience: Joi.boolean().default(true),
+        avoidCompetitorPosts: Joi.boolean().default(true),
+      }),
+    }),
+
+    // Legacy field for backward compatibility (will be moved to scheduling.startDate)
+    scheduledDate: Joi.date().iso(),
+  }),
 };

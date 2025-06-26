@@ -328,12 +328,7 @@ router.put(
     const content = await ContentRepo.findById(
       new Types.ObjectId(req.params.id),
     );
-    console.log('content?.userId', content?.userId);
-    console.log('req.user._id', req.user._id);
-    console.log('content?.userId type:', typeof content?.userId);
-    console.log('req.user._id type:', typeof req.user._id);
-    console.log('content?.userId.toString()', content?.userId?.toString());
-    console.log('req.user._id.toString()', req.user._id?.toString());
+
     if (!content) throw new NotFoundError('Content not found');
 
     // Compare the _id from the populated user object
@@ -373,7 +368,6 @@ router.put(
     let calendarEventsUpdated = 0;
     if (priority) {
       try {
-        console.log('Updating calendar event priorities...');
         const CalendarRepo = (
           await import('../../database/repository/CalendarRepo')
         ).default;
@@ -1025,7 +1019,5 @@ router.get(
     ).send(res);
   }),
 );
-
-// ✨ AI FORM AUTO-FILL - Get single suggestion for instant form filling
 
 export default router;

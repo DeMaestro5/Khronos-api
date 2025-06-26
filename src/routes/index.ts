@@ -17,6 +17,7 @@ import chat from './chat';
 import analytics from './analytics';
 import notifications from './notifications';
 import trend from './trend';
+import settings from './settings';
 
 const router = express.Router();
 
@@ -41,5 +42,6 @@ router.use('/api/v1/chat', chat);
 router.use('/api/v1/analytics', analytics);
 router.use('/api/v1/notifications', notifications);
 router.use('/api/v1/trends', trend);
+router.use('/api/v1/settings', settings);
 
 export default router;

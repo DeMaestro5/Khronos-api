@@ -263,7 +263,12 @@ router.get(
   '/',
   asyncHandler(async (req: ProtectedRequest, res: Response) => {
     const contents = await ContentRepo.findAll();
-    new SuccessResponse('Contents retrieved successfully', contents).send(res);
+    const total = contents.length;
+
+    new SuccessResponse('Contents retrieved successfully', {
+      total,
+      contents,
+    }).send(res);
   }),
 );
 
@@ -298,7 +303,30 @@ router.get(
     const contents = await ContentRepo.findByUserId(
       new Types.ObjectId(req.params.userId),
     );
-    new SuccessResponse('Contents retrieved successfully', contents).send(res);
+    const totalContents = contents.length;
+    new SuccessResponse('Contents retrieved successfully', {
+      totalContents,
+      contents,
+    }).send(res);
+  }),
+);
+
+router.get(
+  '/user/:userId/:platform',
+  asyncHandler(async (req: ProtectedRequest, res: Response) => {
+    const userId = new Types.ObjectId(req.params.userId);
+    const platform = req.params.platform;
+
+    const userPlatformContents = await ContentRepo.findUserPlatform(
+      userId,
+      platform,
+    );
+    const total = userPlatformContents.length;
+
+    new SuccessResponse('Contents retrieved successfully', {
+      total,
+      userPlatformContents,
+    }).send(res);
   }),
 );
 
@@ -316,8 +344,12 @@ router.get(
   '/platform/:platform',
   asyncHandler(async (req: ProtectedRequest, res: Response) => {
     const contents = await ContentRepo.findByPlatform(req.params.platform);
+    const totalContents = contents.length;
     if (contents.length === 0) throw new NotFoundError('Contents not found');
-    new SuccessResponse('Contents retrieved successfully', contents).send(res);
+    new SuccessResponse('Contents retrieved successfully', {
+      contents,
+      totalContents,
+    }).send(res);
   }),
 );
 

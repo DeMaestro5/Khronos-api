@@ -13,6 +13,7 @@ import Content from '../../database/model/content';
 import RAGService from '../../services/RAG-service';
 import { ContentCalendarService } from '../../services/content-calendar.service';
 import aiSuggestRouter from './ai-suggest';
+import { UserCache } from '../../cache/repository/UserCache';
 
 const router = Router();
 
@@ -255,6 +256,9 @@ router.post(
           },
     };
 
+    // 🔄 **CACHE INVALIDATION**: Clear user content cache after creating new content
+    await UserCache.invalidateUserContent(req.user._id);
+
     new SuccessResponse('Content created successfully', responseData).send(res);
   }),
 );
@@ -262,12 +266,28 @@ router.post(
 router.get(
   '/',
   asyncHandler(async (req: ProtectedRequest, res: Response) => {
-    const contents = await ContentRepo.findAll();
+    // 🚀 **CACHING LAYER**: Check cache first for user's content
+    const cachedContent = await UserCache.getUserContent(req.user._id);
+    if (cachedContent) {
+      new SuccessResponse('Contents retrieved successfully (cached)', {
+        total: cachedContent.length,
+        contents: cachedContent,
+        cached: true,
+      }).send(res);
+      return;
+    }
+
+    // Cache miss - fetch from database
+    const contents = await ContentRepo.findByUserId(req.user._id);
     const total = contents.length;
+
+    // 🔄 **CACHE STORAGE**: Store result
+    await UserCache.setUserContent(req.user._id, contents);
 
     new SuccessResponse('Contents retrieved successfully', {
       total,
       contents,
+      cached: false,
     }).send(res);
   }),
 );
@@ -300,13 +320,30 @@ router.get(
 router.get(
   '/user/:userId',
   asyncHandler(async (req: ProtectedRequest, res: Response) => {
-    const contents = await ContentRepo.findByUserId(
-      new Types.ObjectId(req.params.userId),
-    );
+    const userId = new Types.ObjectId(req.params.userId);
+
+    // 🚀 **CACHING LAYER**: Check cache first for user's content
+    const cachedContent = await UserCache.getUserContent(userId);
+    if (cachedContent) {
+      new SuccessResponse('Contents retrieved successfully (cached)', {
+        totalContents: cachedContent.length,
+        contents: cachedContent,
+        cached: true,
+      }).send(res);
+      return;
+    }
+
+    // Cache miss - fetch from database
+    const contents = await ContentRepo.findByUserId(userId);
     const totalContents = contents.length;
+
+    // 🔄 **CACHE STORAGE**: Store result
+    await UserCache.setUserContent(userId, contents);
+
     new SuccessResponse('Contents retrieved successfully', {
       totalContents,
       contents,
+      cached: false,
     }).send(res);
   }),
 );
@@ -741,6 +778,10 @@ router.delete(
       throw new BadRequestError('Not authorized to delete this content');
 
     await ContentRepo.remove(new Types.ObjectId(req.params.id));
+
+    // 🔄 **CACHE INVALIDATION**: Clear user content cache after deleting content
+    await UserCache.invalidateUserContent(req.user._id);
+
     new SuccessResponse('Content deleted successfully', null).send(res);
   }),
 );

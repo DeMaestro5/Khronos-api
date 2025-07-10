@@ -18,6 +18,7 @@ import analytics from './analytics';
 import notifications from './notifications';
 import trend from './trend';
 import settings from './settings';
+import cache from './cache';
 
 const router = express.Router();
 
@@ -43,5 +44,6 @@ router.use('/api/v1/analytics', analytics);
 router.use('/api/v1/notifications', notifications);
 router.use('/api/v1/trends', trend);
 router.use('/api/v1/settings', settings);
+router.use('/api/v1/cache', cache);
 
 export default router;

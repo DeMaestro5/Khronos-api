@@ -101,6 +101,13 @@ async function remove(id: Types.ObjectId): Promise<void> {
   await ContentModel.deleteOne({ _id: id }).lean().exec();
 }
 
+async function findUserPlatform(
+  userId: Types.ObjectId,
+  platform: string,
+): Promise<Content[]> {
+  return ContentModel.find({ userId, platform }).lean().exec();
+}
+
 export default {
   exists,
   findById,
@@ -115,4 +122,5 @@ export default {
   updateStatus,
   updateEngagement,
   remove,
+  findUserPlatform,
 };

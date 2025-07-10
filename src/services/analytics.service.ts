@@ -14,6 +14,7 @@ import {
   CompetitorAnalysis,
   IndustryInsight,
 } from './external-trends.service';
+import { AnalyticsCache } from '../cache/repository/AnalyticsCache';
 
 // Import all helpers
 import {
@@ -47,6 +48,13 @@ export class AnalyticsService {
     userId: Types.ObjectId,
   ): Promise<OverviewAnalytics> {
     try {
+      // 🚀 **CACHING LAYER**: Check cache first
+      const cachedAnalytics = await AnalyticsCache.getOverviewAnalytics(userId);
+      if (cachedAnalytics) {
+        return cachedAnalytics;
+      }
+
+      // Cache miss - compute analytics
       const contents = await ContentRepo.findByUserId(userId);
 
       if (!contents.length) {
@@ -217,7 +225,7 @@ export class AnalyticsService {
             ).toFixed(1)
           : 0;
 
-      return {
+      const analytics: OverviewAnalytics = {
         totalContent: contents.length,
         totalEngagement,
         totalReach,
@@ -236,6 +244,11 @@ export class AnalyticsService {
         platformBreakdown,
         timeSeriesData,
       };
+
+      // 🚀 **CACHING LAYER**: Store result in cache
+      await AnalyticsCache.setOverviewAnalytics(userId, analytics);
+
+      return analytics;
     } catch (error) {
       console.error('Error getting overview analytics:', error);
       return getEmptyOverviewAnalytics();
@@ -246,17 +259,26 @@ export class AnalyticsService {
     contentId: Types.ObjectId,
   ): Promise<ContentPerformance[]> {
     try {
+      // 🚀 **CACHING LAYER**: Check cache first
+      const cachedAnalytics =
+        await AnalyticsCache.getContentAnalytics(contentId);
+      if (cachedAnalytics) {
+        return cachedAnalytics;
+      }
+
+      // Cache miss - compute analytics
       const content = await ContentRepo.findById(contentId);
       if (!content) {
         throw new Error('Content not found');
       }
 
-      return content.platform.map((platform) => {
+      const result = content.platform.map((platform) => {
         const metrics = extractRealMetrics(content, platform);
         const score = calculatePerformanceScore(content, platform);
 
         // Calculate trend based on current performance
-        const trend = score > 60 ? 'up' : score < 30 ? 'down' : 'stable';
+        const trend: 'up' | 'down' | 'stable' =
+          score > 60 ? 'up' : score < 30 ? 'down' : 'stable';
 
         return {
           _id: new Types.ObjectId(),
@@ -290,6 +312,11 @@ export class AnalyticsService {
           updatedAt: content.updatedAt,
         };
       });
+
+      // 🔄 **CACHE STORAGE**: Store result
+      await AnalyticsCache.setContentAnalytics(contentId, result);
+
+      return result;
     } catch (error) {
       console.error('Error getting content analytics:', error);
       throw error;
@@ -941,44 +968,65 @@ export class AnalyticsService {
     platform: string,
   ): Promise<RealTimeMetrics> {
     try {
+      // 🚀 **CACHING LAYER**: Check cache first for real-time metrics
+      const cachedMetrics = await AnalyticsCache.getRealTimeMetrics(
+        contentId,
+        platform,
+      );
+      if (cachedMetrics) {
+        return cachedMetrics;
+      }
+
+      // Cache miss - fetch from external APIs
+      let metrics: RealTimeMetrics;
+
       switch (platform) {
         case 'instagram':
-          return await this.socialMediaService.getInstagramRealTimeMetrics(
-            contentId,
-          );
+          metrics =
+            await this.socialMediaService.getInstagramRealTimeMetrics(
+              contentId,
+            );
+          break;
         case 'youtube':
-          return await this.socialMediaService.getYouTubeRealTimeMetrics(
-            contentId,
-          );
+          metrics =
+            await this.socialMediaService.getYouTubeRealTimeMetrics(contentId);
+          break;
         case 'tiktok':
-          return await this.socialMediaService.getTikTokRealTimeMetrics(
-            contentId,
-          );
+          metrics =
+            await this.socialMediaService.getTikTokRealTimeMetrics(contentId);
+          break;
         case 'linkedin':
-          return await this.socialMediaService.getLinkedInRealTimeMetrics(
-            contentId,
-          );
+          metrics =
+            await this.socialMediaService.getLinkedInRealTimeMetrics(contentId);
+          break;
         case 'twitter':
-          return await this.socialMediaService.getTwitterRealTimeMetrics(
-            contentId,
-          );
+          metrics =
+            await this.socialMediaService.getTwitterRealTimeMetrics(contentId);
+          break;
         case 'facebook':
-          return await this.socialMediaService.getFacebookRealTimeMetrics(
-            contentId,
-          );
+          metrics =
+            await this.socialMediaService.getFacebookRealTimeMetrics(contentId);
+          break;
         case 'medium':
           // Medium doesn't have a real-time API, return mock data
           console.log(
             `Medium platform detected, returning mock data for content ${contentId}`,
           );
-          return this.generateMockRealTimeMetrics(contentId, platform);
+          metrics = this.generateMockRealTimeMetrics(contentId, platform);
+          break;
         default:
           // For any other unsupported platforms, return mock data instead of throwing
           console.log(
             `Unsupported platform ${platform} detected, returning mock data for content ${contentId}`,
           );
-          return this.generateMockRealTimeMetrics(contentId, platform);
+          metrics = this.generateMockRealTimeMetrics(contentId, platform);
+          break;
       }
+
+      // 🚀 **CACHING LAYER**: Store result in cache with short TTL (30 seconds)
+      await AnalyticsCache.setRealTimeMetrics(contentId, platform, metrics);
+
+      return metrics;
     } catch (error) {
       console.error('Error fetching real-time metrics:', error);
       // Return mock data as fallback instead of throwing

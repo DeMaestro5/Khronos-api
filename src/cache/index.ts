@@ -22,14 +22,16 @@ Logger.info('Redis Configuration:', {
   hasRedisConfig,
 });
 
-// If in production but no Redis config, warn and disable caching
+// If in production but no Redis config, warn and provide setup instructions
 if (isProduction && !hasRedisConfig) {
   Logger.warn(
-    'Production environment detected but no Redis configuration found. Caching will be disabled.',
+    'Production environment detected but no Redis configuration found.',
   );
-  Logger.info(
-    'To enable Redis: Set up Redis service on Render and configure REDIS_URL environment variable',
-  );
+  Logger.info('Caching will be disabled until Redis is configured.');
+  Logger.info('To enable Redis:');
+  Logger.info('1. Create Redis service on Render dashboard');
+  Logger.info('2. Add REDIS_URL environment variable to your web service');
+  Logger.info('3. Redeploy to enable caching functionality');
 }
 
 // Create Redis client only if configuration is available

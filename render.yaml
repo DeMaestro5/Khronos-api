@@ -4,7 +4,7 @@ services:
     name: khronos-api
     env: node
     plan: starter
-    buildCommand: npm install && npm run build
+    buildCommand: npm ci && npm run build:render
     startCommand: npm run serve
     envVars:
       - key: NODE_ENV

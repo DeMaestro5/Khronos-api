@@ -2,12 +2,14 @@ import { redis } from '../config';
 import { createClient } from 'redis';
 import Logger from '../core/Logger';
 
-// Handle missing Redis configuration
+// Handle Redis configuration - prefer REDIS_URL if available
+const redisUrl = process.env.REDIS_URL;
 const redisHost = redis.host || 'localhost';
 const redisPort = redis.port || 6379;
 const redisPassword = redis.password || '';
 
 Logger.info('Redis Configuration:', {
+  hasRedisUrl: !!redisUrl,
   host: redisHost,
   port: redisPort,
   hasPassword: !!redisPassword,
@@ -15,20 +17,34 @@ Logger.info('Redis Configuration:', {
 });
 
 // Create Redis client with proper configuration
-const clientConfig: any = {
-  socket: {
-    host: redisHost,
-    port: redisPort,
-    connectTimeout: 60000, // 60 seconds timeout for initial connection
-    lazyConnect: true, // Don't connect immediately
-  },
-};
+let clientConfig: any;
 
-// Only add password if it's actually provided and not empty
-if (redisPassword && redisPassword.trim() !== '') {
+if (redisUrl) {
+  // Use Redis URL (preferred for Render)
+  clientConfig = {
+    url: redisUrl,
+    socket: {
+      connectTimeout: 60000,
+      lazyConnect: true,
+    },
+  };
+} else {
+  // Use individual components
+  clientConfig = {
+    socket: {
+      host: redisHost,
+      port: redisPort,
+      connectTimeout: 60000, // 60 seconds timeout for initial connection
+      lazyConnect: true, // Don't connect immediately
+    },
+  };
+}
+
+// Only add password if it's actually provided and not empty (for individual components only)
+if (!redisUrl && redisPassword && redisPassword.trim() !== '') {
   clientConfig.password = redisPassword;
   Logger.info('Redis: Using password authentication');
-} else {
+} else if (!redisUrl) {
   Logger.info('Redis: No password authentication');
 }
 

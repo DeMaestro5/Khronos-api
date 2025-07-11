@@ -4,18 +4,23 @@ services:
     name: khronos-api
     env: node
     plan: starter
-    buildCommand: npm install && npm run build
+    buildCommand: npm ci && npm run build:render
     startCommand: npm run serve
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 10000
+      # Use external MongoDB Atlas (set this manually in dashboard)
       - key: MONGODB_URI
+        value: your-mongodb-connection-string-here
+      # Redis connection using connection string (more reliable)
+      - key: REDIS_URL
         fromService:
-          type: pserv
-          name: khronos-mongo
+          type: redis
+          name: khronos-redis
           property: connectionString
+      # Individual Redis components as backup
       - key: REDIS_HOST
         fromService:
           type: redis
@@ -27,10 +32,7 @@ services:
           name: khronos-redis
           property: port
       - key: REDIS_PASSWORD
-        fromService:
-          type: redis
-          name: khronos-redis
-          property: password
+        value: ''
       # Add your other environment variables here
       - key: JWT_SECRET
         generateValue: true
@@ -44,14 +46,3 @@ services:
     name: khronos-redis
     plan: starter
     maxmemoryPolicy: allkeys-lru
-
-  # MongoDB Database Service
-  - type: pserv
-    name: khronos-mongo
-    env: docker
-    plan: starter
-    dockerfilePath: ./mongo.dockerfile
-    disk:
-      name: khronos-mongo-data
-      mountPath: /data/db
-      sizeGB: 10

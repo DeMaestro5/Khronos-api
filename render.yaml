@@ -1,0 +1,57 @@
+services:
+  # Main Node.js API Service
+  - type: web
+    name: khronos-api
+    env: node
+    plan: starter
+    buildCommand: npm install && npm run build
+    startCommand: npm run serve
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: MONGODB_URI
+        fromService:
+          type: pserv
+          name: khronos-mongo
+          property: connectionString
+      - key: REDIS_HOST
+        fromService:
+          type: redis
+          name: khronos-redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          type: redis
+          name: khronos-redis
+          property: port
+      - key: REDIS_PASSWORD
+        fromService:
+          type: redis
+          name: khronos-redis
+          property: password
+      # Add your other environment variables here
+      - key: JWT_SECRET
+        generateValue: true
+      - key: FRONTEND_URL
+        value: https://your-frontend-domain.com
+      - key: CORS_URL
+        value: https://your-frontend-domain.com
+
+  # Redis Cache Service
+  - type: redis
+    name: khronos-redis
+    plan: starter
+    maxmemoryPolicy: allkeys-lru
+
+  # MongoDB Database Service
+  - type: pserv
+    name: khronos-mongo
+    env: docker
+    plan: starter
+    dockerfilePath: ./mongo.dockerfile
+    disk:
+      name: khronos-mongo-data
+      mountPath: /data/db
+      sizeGB: 10

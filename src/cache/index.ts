@@ -32,51 +32,79 @@ if (isProduction && !hasRedisConfig) {
   );
 }
 
-// Create Redis client with proper configuration
-let clientConfig: any;
+// Create Redis client only if configuration is available
+let client: any;
 
-if (redisUrl) {
-  // Use Redis URL (preferred for Render)
-  clientConfig = {
-    url: redisUrl,
-    socket: {
-      connectTimeout: 60000,
-      lazyConnect: true,
-    },
-  };
+if (hasRedisConfig) {
+  // Create Redis client with proper configuration
+  let clientConfig: any;
+
+  if (redisUrl) {
+    // Use Redis URL (preferred for Render)
+    clientConfig = {
+      url: redisUrl,
+      socket: {
+        connectTimeout: 60000,
+        lazyConnect: true,
+      },
+    };
+  } else {
+    // Use individual components
+    clientConfig = {
+      socket: {
+        host: redisHost,
+        port: redisPort,
+        connectTimeout: 60000, // 60 seconds timeout for initial connection
+        lazyConnect: true, // Don't connect immediately
+      },
+    };
+  }
+
+  // Only add password if it's actually provided and not empty (for individual components only)
+  if (!redisUrl && redisPassword && redisPassword.trim() !== '') {
+    clientConfig.password = redisPassword;
+    Logger.info('Redis: Using password authentication');
+  } else if (!redisUrl) {
+    Logger.info('Redis: No password authentication');
+  }
+
+  client = createClient(clientConfig);
+
+  client.on('connect', () => Logger.info('Cache is connecting'));
+  client.on('ready', () => Logger.info('Cache is ready'));
+  client.on('end', () => Logger.info('Cache disconnected'));
+  client.on('reconnecting', () => Logger.info('Cache is reconnecting'));
+  client.on('error', (e: any) => Logger.error('Redis connection error:', e));
 } else {
-  // Use individual components
-  clientConfig = {
-    socket: {
-      host: redisHost,
-      port: redisPort,
-      connectTimeout: 60000, // 60 seconds timeout for initial connection
-      lazyConnect: true, // Don't connect immediately
+  // Create a mock client for environments without Redis
+  Logger.info('Creating mock Redis client - no Redis configuration available');
+  client = {
+    isReady: false,
+    isMock: true,
+    connect: async () => {
+      Logger.debug('Mock Redis client - connect called but ignored');
+      return Promise.resolve();
     },
+    disconnect: async () => Promise.resolve(),
+    get: async () => null,
+    set: async () => null,
+    del: async () => 0,
+    exists: async () => 0,
+    on: () => {}, // Mock event listener
   };
 }
-
-// Only add password if it's actually provided and not empty (for individual components only)
-if (!redisUrl && redisPassword && redisPassword.trim() !== '') {
-  clientConfig.password = redisPassword;
-  Logger.info('Redis: Using password authentication');
-} else if (!redisUrl) {
-  Logger.info('Redis: No password authentication');
-}
-
-const client = createClient(clientConfig);
-
-client.on('connect', () => Logger.info('Cache is connecting'));
-client.on('ready', () => Logger.info('Cache is ready'));
-client.on('end', () => Logger.info('Cache disconnected'));
-client.on('reconnecting', () => Logger.info('Cache is reconnecting'));
-client.on('error', (e) => Logger.error('Redis connection error:', e));
 
 // Connection function with retry logic
 const connectWithRetry = async (maxRetries = 3, delay = 5000) => {
-  // Skip connection if in production without Redis config
-  if (isProduction && !hasRedisConfig) {
-    Logger.info('Skipping Redis connection - no configuration provided');
+  // Skip connection if no Redis config or using mock client
+  if (!hasRedisConfig) {
+    Logger.info('No Redis configuration available - skipping connection');
+    return;
+  }
+
+  // Skip if using mock client
+  if (client.isMock) {
+    Logger.info('Using mock Redis client - no connection needed');
     return;
   }
 
@@ -90,7 +118,7 @@ const connectWithRetry = async (maxRetries = 3, delay = 5000) => {
 
       if (i === maxRetries - 1) {
         Logger.warn(
-          'Cache functionality will be disabled - check Redis configuration',
+          'All Redis connection attempts failed - disabling cache functionality',
         );
         return;
       }
@@ -101,12 +129,18 @@ const connectWithRetry = async (maxRetries = 3, delay = 5000) => {
   }
 };
 
-// Connect to Redis with retry logic
-connectWithRetry();
+// Only attempt connection if we have proper Redis configuration
+if (hasRedisConfig) {
+  connectWithRetry();
+} else {
+  Logger.info('Redis configuration not found - running without cache');
+}
 
 // If the Node process ends, close the Cache connection
 process.on('SIGINT', async () => {
-  await client.disconnect();
+  if (!client.isMock && client.disconnect) {
+    await client.disconnect();
+  }
 });
 
 // Create a safe Redis client wrapper
@@ -114,8 +148,12 @@ const safeRedisClient = {
   ...client,
   // Override methods to handle disconnected state gracefully
   get: async (key: string) => {
-    if (!client.isReady) {
-      Logger.debug(`Redis not available, skipping GET for key: ${key}`);
+    if (client.isMock || !client.isReady) {
+      if (client.isMock) {
+        Logger.debug(`Mock Redis client - skipping GET for key: ${key}`);
+      } else {
+        Logger.debug(`Redis not available, skipping GET for key: ${key}`);
+      }
       return null;
     }
     try {
@@ -127,8 +165,12 @@ const safeRedisClient = {
   },
 
   set: async (key: string, value: string, options?: any) => {
-    if (!client.isReady) {
-      Logger.debug(`Redis not available, skipping SET for key: ${key}`);
+    if (client.isMock || !client.isReady) {
+      if (client.isMock) {
+        Logger.debug(`Mock Redis client - skipping SET for key: ${key}`);
+      } else {
+        Logger.debug(`Redis not available, skipping SET for key: ${key}`);
+      }
       return null;
     }
     try {
@@ -140,8 +182,12 @@ const safeRedisClient = {
   },
 
   del: async (key: string) => {
-    if (!client.isReady) {
-      Logger.debug(`Redis not available, skipping DEL for key: ${key}`);
+    if (client.isMock || !client.isReady) {
+      if (client.isMock) {
+        Logger.debug(`Mock Redis client - skipping DEL for key: ${key}`);
+      } else {
+        Logger.debug(`Redis not available, skipping DEL for key: ${key}`);
+      }
       return 0;
     }
     try {
@@ -153,8 +199,12 @@ const safeRedisClient = {
   },
 
   exists: async (key: string) => {
-    if (!client.isReady) {
-      Logger.debug(`Redis not available, skipping EXISTS for key: ${key}`);
+    if (client.isMock || !client.isReady) {
+      if (client.isMock) {
+        Logger.debug(`Mock Redis client - skipping EXISTS for key: ${key}`);
+      } else {
+        Logger.debug(`Redis not available, skipping EXISTS for key: ${key}`);
+      }
       return 0;
     }
     try {

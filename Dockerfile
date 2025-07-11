@@ -19,9 +19,6 @@ RUN npm ci
 # build the TypeScript application with memory optimization
 RUN NODE_OPTIONS='--max-old-space-size=1024' npm run build:render
 
-# clean up dev dependencies to reduce image size (optional)
-RUN npm prune --production
-
 # container exposed network port number
 EXPOSE 3000
 

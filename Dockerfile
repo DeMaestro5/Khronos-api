@@ -13,8 +13,14 @@ WORKDIR /home/node/app
 # grant permission of node project directory to node user
 COPY --chown=node:node . .
 
-# installing the dependencies into the container
-RUN npm install
+# installing all dependencies (including dev deps for TypeScript compilation)
+RUN npm ci
+
+# build the TypeScript application with memory optimization
+RUN NODE_OPTIONS='--max-old-space-size=1024' npm run build:render
+
+# clean up dev dependencies to reduce image size (optional)
+RUN npm prune --production
 
 # container exposed network port number
 EXPOSE 3000

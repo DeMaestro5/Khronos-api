@@ -8,13 +8,29 @@ const redisHost = redis.host || 'localhost';
 const redisPort = redis.port || 6379;
 const redisPassword = redis.password || '';
 
+// Check if Redis is configured for production
+const isProduction = process.env.NODE_ENV === 'production';
+const hasRedisConfig = redisUrl || (redisHost && redisHost !== 'localhost');
+
 Logger.info('Redis Configuration:', {
+  environment: process.env.NODE_ENV,
   hasRedisUrl: !!redisUrl,
   host: redisHost,
   port: redisPort,
   hasPassword: !!redisPassword,
   passwordLength: redisPassword ? redisPassword.length : 0,
+  hasRedisConfig,
 });
+
+// If in production but no Redis config, warn and disable caching
+if (isProduction && !hasRedisConfig) {
+  Logger.warn(
+    'Production environment detected but no Redis configuration found. Caching will be disabled.',
+  );
+  Logger.info(
+    'To enable Redis: Set up Redis service on Render and configure REDIS_URL environment variable',
+  );
+}
 
 // Create Redis client with proper configuration
 let clientConfig: any;
@@ -58,6 +74,12 @@ client.on('error', (e) => Logger.error('Redis connection error:', e));
 
 // Connection function with retry logic
 const connectWithRetry = async (maxRetries = 3, delay = 5000) => {
+  // Skip connection if in production without Redis config
+  if (isProduction && !hasRedisConfig) {
+    Logger.info('Skipping Redis connection - no configuration provided');
+    return;
+  }
+
   for (let i = 0; i < maxRetries; i++) {
     try {
       await client.connect();
@@ -87,4 +109,61 @@ process.on('SIGINT', async () => {
   await client.disconnect();
 });
 
-export default client;
+// Create a safe Redis client wrapper
+const safeRedisClient = {
+  ...client,
+  // Override methods to handle disconnected state gracefully
+  get: async (key: string) => {
+    if (!client.isReady) {
+      Logger.debug(`Redis not available, skipping GET for key: ${key}`);
+      return null;
+    }
+    try {
+      return await client.get(key);
+    } catch (error) {
+      Logger.warn(`Redis GET failed for key ${key}:`, error);
+      return null;
+    }
+  },
+
+  set: async (key: string, value: string, options?: any) => {
+    if (!client.isReady) {
+      Logger.debug(`Redis not available, skipping SET for key: ${key}`);
+      return null;
+    }
+    try {
+      return await client.set(key, value, options);
+    } catch (error) {
+      Logger.warn(`Redis SET failed for key ${key}:`, error);
+      return null;
+    }
+  },
+
+  del: async (key: string) => {
+    if (!client.isReady) {
+      Logger.debug(`Redis not available, skipping DEL for key: ${key}`);
+      return 0;
+    }
+    try {
+      return await client.del(key);
+    } catch (error) {
+      Logger.warn(`Redis DEL failed for key ${key}:`, error);
+      return 0;
+    }
+  },
+
+  exists: async (key: string) => {
+    if (!client.isReady) {
+      Logger.debug(`Redis not available, skipping EXISTS for key: ${key}`);
+      return 0;
+    }
+    try {
+      return await client.exists(key);
+    } catch (error) {
+      Logger.warn(`Redis EXISTS failed for key ${key}:`, error);
+      return 0;
+    }
+  },
+};
+
+export default safeRedisClient;

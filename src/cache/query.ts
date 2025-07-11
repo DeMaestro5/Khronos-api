@@ -128,7 +128,7 @@ export async function getListRange<T>(
     const list = await cache.lRange(key, start, end);
     if (!list) return null;
 
-    const data = list.map((entry) => JSON.parse(entry) as T);
+    const data = list.map((entry: string) => JSON.parse(entry) as T);
     return data;
   } catch (error) {
     Logger.error(`Cache getListRange error for key ${key}:`, error);
@@ -201,10 +201,12 @@ export async function getOrderedSetRange<T>(
 
     const set = await cache.zRangeWithScores(key, start, end);
 
-    const data: { score: number; value: T }[] = set.map((entry) => ({
-      score: entry.score,
-      value: JSON.parse(entry.value),
-    }));
+    const data: { score: number; value: T }[] = set.map(
+      (entry: { score: number; value: string }) => ({
+        score: entry.score,
+        value: JSON.parse(entry.value),
+      }),
+    );
     return data;
   } catch (error) {
     Logger.error(`Cache getOrderedSetRange error for key ${key}:`, error);

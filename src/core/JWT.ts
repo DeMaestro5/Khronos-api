@@ -5,11 +5,11 @@ import { sign, verify } from 'jsonwebtoken';
 import { InternalError, BadTokenError, TokenExpiredError } from './ApiError';
 
 /*
- * issuer 		— Software organization who issues the token.
- * subject 		— Intended user of the token.
- * audience 	— Basically identity of the intended recipient of the token.
- * expiresIn	— Expiration time after which the token will be invalid.
- * algorithm 	— Encryption algorithm to be used to protect the token.
+ * issuer 		— Software organization who issues the token.
+ * subject 		— Intended user of the token.
+ * audience 	— Basically identity of the intended recipient of the token.
+ * expiresIn	— Expiration time after which the token will be invalid.
+ * algorithm 	— Encryption algorithm to be used to protect the token.
  */
 
 export class JwtPayload {
@@ -37,17 +37,39 @@ export class JwtPayload {
 }
 
 async function readPublicKey(): Promise<string> {
-  return promisify(readFile)(
-    path.join(__dirname, '../../keys/public.pem'),
-    'utf8',
-  );
+  // First try environment variable, then fallback to file
+  if (process.env.RSA_PUBLIC_KEY) {
+    return process.env.RSA_PUBLIC_KEY.replace(/\\n/g, '\n');
+  }
+
+  try {
+    return promisify(readFile)(
+      path.join(__dirname, '../../keys/public.pem'),
+      'utf8',
+    );
+  } catch (error) {
+    throw new InternalError(
+      'Public key not found. Please set RSA_PUBLIC_KEY environment variable or add keys/public.pem file.',
+    );
+  }
 }
 
 async function readPrivateKey(): Promise<string> {
-  return promisify(readFile)(
-    path.join(__dirname, '../../keys/private.pem'),
-    'utf8',
-  );
+  // First try environment variable, then fallback to file
+  if (process.env.RSA_PRIVATE_KEY) {
+    return process.env.RSA_PRIVATE_KEY.replace(/\\n/g, '\n');
+  }
+
+  try {
+    return promisify(readFile)(
+      path.join(__dirname, '../../keys/private.pem'),
+      'utf8',
+    );
+  } catch (error) {
+    throw new InternalError(
+      'Private key not found. Please set RSA_PRIVATE_KEY environment variable or add keys/private.pem file.',
+    );
+  }
 }
 
 async function encode(payload: JwtPayload): Promise<string> {

@@ -11,7 +11,7 @@ Logger.info('Redis Configuration:', {
   host: redisHost,
   port: redisPort,
   hasPassword: !!redisPassword,
-  passwordLength: redisPassword.length,
+  passwordLength: redisPassword ? redisPassword.length : 0,
 });
 
 // Create Redis client with proper configuration
@@ -19,6 +19,8 @@ const clientConfig: any = {
   socket: {
     host: redisHost,
     port: redisPort,
+    connectTimeout: 60000, // 60 seconds timeout for initial connection
+    lazyConnect: true, // Don't connect immediately
   },
 };
 
@@ -38,17 +40,31 @@ client.on('end', () => Logger.info('Cache disconnected'));
 client.on('reconnecting', () => Logger.info('Cache is reconnecting'));
 client.on('error', (e) => Logger.error('Redis connection error:', e));
 
-(async () => {
-  try {
-    await client.connect();
-    Logger.info('Successfully connected to Redis');
-  } catch (error) {
-    Logger.error('Failed to connect to Redis:', error);
-    Logger.warn(
-      'Cache functionality will be disabled - check Redis configuration',
-    );
+// Connection function with retry logic
+const connectWithRetry = async (maxRetries = 3, delay = 5000) => {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      await client.connect();
+      Logger.info('Successfully connected to Redis');
+      return;
+    } catch (error) {
+      Logger.error(`Redis connection attempt ${i + 1} failed:`, error);
+
+      if (i === maxRetries - 1) {
+        Logger.warn(
+          'Cache functionality will be disabled - check Redis configuration',
+        );
+        return;
+      }
+
+      Logger.info(`Retrying Redis connection in ${delay}ms...`);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
   }
-})();
+};
+
+// Connect to Redis with retry logic
+connectWithRetry();
 
 // If the Node process ends, close the Cache connection
 process.on('SIGINT', async () => {

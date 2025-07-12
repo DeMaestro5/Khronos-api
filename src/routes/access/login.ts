@@ -15,6 +15,7 @@ router.post(
     const { user, tokens } = await AuthService.login({
       email: req.body.email,
       password: req.body.password,
+      rememberMe: req.body.rememberMe,
     });
 
     new SuccessResponse('Login Success', {

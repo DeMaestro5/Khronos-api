@@ -24,6 +24,9 @@ export const tokenInfo = {
   refreshTokenValidity: parseInt(
     process.env.REFRESH_TOKEN_VALIDITY_SEC || '604800',
   ),
+  rememberMeRefreshTokenValidity: parseInt(
+    process.env.REMEMBER_ME_REFRESH_TOKEN_VALIDITY_SEC || '2592000',
+  ),
   issuer: process.env.TOKEN_ISSUER || '',
   audience: process.env.TOKEN_AUDIENCE || '',
 };

@@ -22,6 +22,7 @@ export interface SignupData {
 export interface LoginData {
   email: string;
   password: string;
+  rememberMe?: boolean;
 }
 
 export interface AuthResponse {
@@ -80,7 +81,12 @@ class AuthService {
     const refreshTokenKey = crypto.randomBytes(64).toString('hex');
 
     await KeystoreRepo.create(user, accessTokenKey, refreshTokenKey);
-    const tokens = await createTokens(user, accessTokenKey, refreshTokenKey);
+    const tokens = await createTokens(
+      user,
+      accessTokenKey,
+      refreshTokenKey,
+      data.rememberMe,
+    );
     const userData = await getUserData(user);
 
     return {

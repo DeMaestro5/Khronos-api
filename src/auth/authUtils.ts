@@ -31,6 +31,7 @@ export const createTokens = async (
   user: User,
   accessTokenKey: string,
   refreshTokenKey: string,
+  rememberMe?: boolean,
 ): Promise<Tokens> => {
   const accessToken = await JWT.encode(
     new JwtPayload(
@@ -44,13 +45,17 @@ export const createTokens = async (
 
   if (!accessToken) throw new InternalError();
 
+  const refreshTokenValidity = rememberMe
+    ? tokenInfo.rememberMeRefreshTokenValidity
+    : tokenInfo.refreshTokenValidity;
+
   const refreshToken = await JWT.encode(
     new JwtPayload(
       tokenInfo.issuer,
       tokenInfo.audience,
       user._id.toString(),
       refreshTokenKey,
-      tokenInfo.refreshTokenValidity,
+      refreshTokenValidity,
     ),
   );
 

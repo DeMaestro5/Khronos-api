@@ -10,27 +10,27 @@ export default [
   validator(schema.resetPassword),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { token, password } = req.body;
+      const { code, password } = req.body;
 
-      // Find user by reset token and select necessary fields
+      // Find user by reset code and select necessary fields
       const user = await UserModel.findOne({
-        resetPasswordToken: token,
+        resetPasswordCode: code,
         resetPasswordExpires: { $gt: new Date() },
-      }).select('+resetPasswordToken +resetPasswordExpires');
+      }).select('+resetPasswordCode +resetPasswordExpires');
 
       if (!user) {
-        throw new BadRequestError('Invalid or expired reset token');
+        throw new BadRequestError('Invalid or expired reset code');
       }
 
       // Hash new password
       const hashedPassword = await bcrypt.hash(password, 10);
 
-      // Update user password and clear reset token
+      // Update user password and clear reset code
       await UserModel.findByIdAndUpdate(
         user._id,
         {
           password: hashedPassword,
-          resetPasswordToken: undefined,
+          resetPasswordCode: undefined,
           resetPasswordExpires: undefined,
         },
         { new: true },

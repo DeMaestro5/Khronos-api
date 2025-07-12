@@ -27,7 +27,10 @@ export default {
     email: Joi.string().required().email(),
   }),
   resetPassword: Joi.object().keys({
-    token: Joi.string().required(),
+    code: Joi.string()
+      .required()
+      .length(5)
+      .pattern(/^[A-Z0-9]{5}$/),
     password: Joi.string().required().min(8),
   }),
 };

@@ -18,6 +18,7 @@ export default interface User {
   verified?: boolean;
   status?: boolean;
   resetPasswordToken?: string;
+  resetPasswordCode?: string;
   resetPasswordExpires?: Date;
   createdAt?: Date;
   updatedAt?: Date;
@@ -60,6 +61,10 @@ const schema = new Schema<User>(
       default: true,
     },
     resetPasswordToken: {
+      type: Schema.Types.String,
+      select: false,
+    },
+    resetPasswordCode: {
       type: Schema.Types.String,
       select: false,
     },

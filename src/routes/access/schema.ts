@@ -23,7 +23,9 @@ export default {
     profilePicUrl: Joi.string().optional().uri(),
     role: Joi.string().optional(),
   }),
-
+  googleAuth: Joi.object().keys({
+    // Google OAuth doesn't require body validation as it's handled by Passport
+  }),
   forgotPassword: Joi.object().keys({
     email: Joi.string().required().email(),
   }),

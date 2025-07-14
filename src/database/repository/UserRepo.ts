@@ -35,6 +35,13 @@ async function findByEmail(email: string): Promise<User | null> {
     .exec();
 }
 
+async function findByGoogleId(googleId: string): Promise<User | null> {
+  return UserModel.findOne({ googleId: googleId, status: true })
+    .select('+email +googleId +googleEmail')
+    .lean()
+    .exec();
+}
+
 async function findFieldsById(
   id: Types.ObjectId,
   ...fields: string[]
@@ -74,6 +81,60 @@ async function create(
   };
 }
 
+async function createWithGoogle(
+  user: User,
+  accessTokenKey: string,
+  refreshTokenKey: string,
+  roleCode: string,
+): Promise<{ user: User; keystore: Keystore }> {
+  const now = new Date();
+
+  if (!Object.values(UserRole).includes(roleCode as UserRole)) {
+    throw new InternalError('Invalid role');
+  }
+
+  user.role = roleCode;
+  user.createdAt = user.updatedAt = now;
+  user.authProvider = 'google';
+  const createdUser = await UserModel.create(user);
+  const keystore = await KeystoreRepo.create(
+    createdUser,
+    accessTokenKey,
+    refreshTokenKey,
+  );
+  return {
+    user: { ...createdUser.toObject() },
+    keystore: keystore,
+  };
+}
+
+async function linkGoogleAccount(
+  userId: Types.ObjectId,
+  googleData: { googleId: string; googleEmail: string; authProvider: string },
+): Promise<User> {
+  const updatedUser = await UserModel.findByIdAndUpdate(
+    userId,
+    {
+      $set: {
+        googleId: googleData.googleId,
+        googleEmail: googleData.googleEmail,
+        authProvider: googleData.authProvider,
+        updatedAt: new Date(),
+      },
+    },
+    { new: true },
+  )
+    .select('+email +googleId +googleEmail')
+    .lean()
+    .exec();
+
+  if (!updatedUser) {
+    throw new InternalError('Failed to link Google account');
+  }
+
+  return updatedUser;
+}
+
 async function update(
   user: User,
   accessTokenKey: string,
@@ -103,9 +164,12 @@ export default {
   findPrivateProfileById,
   findById,
   findByEmail,
+  findByGoogleId,
   findFieldsById,
   findPublicProfileById,
   create,
+  createWithGoogle,
+  linkGoogleAccount,
   update,
   updateInfo,
 };

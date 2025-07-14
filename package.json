@@ -18,7 +18,8 @@
     "eslint": "eslint . --ext .js,.ts",
     "upgrade": "npm update --save-dev && npm update --save",
     "upgrade-latest": "npx npm-check-updates -u && npm install ",
-    "test": "jest --forceExit --detectOpenHandles --coverage --verbose"
+    "test": "jest --forceExit --detectOpenHandles --coverage --verbose",
+    "setup:google-oauth": "echo 'Please follow the Google OAuth setup guide in GOOGLE_OAUTH_SETUP.md'"
   },
   "repository": {
     "type": "git",
@@ -37,10 +38,13 @@
     "@langchain/openai": "^0.5.10",
     "@langchain/pinecone": "^0.2.0",
     "@pinecone-database/pinecone": "^5.1.2",
+    "@types/passport": "^1.0.17",
+    "@types/passport-google-oauth20": "^2.0.16",
     "axios": "^1.9.0",
     "bcrypt": "^5.1.1",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "joi": "^17.11.0",
     "jsonwebtoken": "^9.0.2",
@@ -52,12 +56,13 @@
     "newrelic": "^11.8.0",
     "nodemailer": "^7.0.3",
     "openai": "^4.100.0",
+    "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0",
     "qs": "^6.11.2",
     "redis": "^4.6.12",
     "socket.io": "^4.8.1",
     "winston": "^3.11.0",
-    "winston-daily-rotate-file": "^4.7.1",
-    "dotenv": "^16.3.1"
+    "winston-daily-rotate-file": "^4.7.1"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",

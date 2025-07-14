@@ -20,6 +20,10 @@ export default interface User {
   resetPasswordToken?: string;
   resetPasswordCode?: string;
   resetPasswordExpires?: Date;
+  // Google OAuth fields
+  googleId?: string;
+  googleEmail?: string;
+  authProvider?: 'local' | 'google';
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -72,6 +76,24 @@ const schema = new Schema<User>(
       type: Schema.Types.Date,
       select: false,
     },
+    // Google OAuth fields
+    googleId: {
+      type: Schema.Types.String,
+      unique: true,
+      sparse: true,
+      select: false,
+    },
+    googleEmail: {
+      type: Schema.Types.String,
+      unique: true,
+      sparse: true,
+      select: false,
+    },
+    authProvider: {
+      type: Schema.Types.String,
+      enum: ['local', 'google'],
+      default: 'local',
+    },
     createdAt: {
       type: Schema.Types.Date,
       required: true,
@@ -91,5 +113,7 @@ const schema = new Schema<User>(
 schema.index({ _id: 1, status: 1 });
 schema.index({ email: 1 });
 schema.index({ status: 1 });
+schema.index({ googleId: 1 });
+schema.index({ googleEmail: 1 });
 
 export const UserModel = model<User>(DOCUMENT_NAME, schema, COLLECTION_NAME);

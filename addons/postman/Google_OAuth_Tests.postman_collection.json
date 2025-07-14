@@ -1,0 +1,95 @@
+{
+  "info": {
+    "name": "Google OAuth Tests",
+    "description": "Collection for testing Google OAuth authentication endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "api_key",
+      "value": "GCMUDibV5a7WvyUNt9n3QztToSHZk7Uj",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Test Google OAuth Configuration",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{api_key}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/auth/google/test",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "auth", "google", "test"]
+        },
+        "description": "Test if Google OAuth is properly configured"
+      },
+      "response": []
+    },
+    {
+      "name": "Google OAuth Login (Browser Test)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{api_key}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/auth/google/login",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "auth", "google", "login"]
+        },
+        "description": "Initiates Google OAuth flow. This will redirect to Google's consent screen. Best tested in browser."
+      },
+      "response": []
+    },
+    {
+      "name": "Google OAuth Failure Handler",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{api_key}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/auth/google/failure",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "auth", "google", "failure"]
+        },
+        "description": "Test the failure handler for Google OAuth"
+      },
+      "response": []
+    },
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": ["{{base_url}}"],
+          "path": ["health"]
+        },
+        "description": "Basic health check to ensure server is running"
+      },
+      "response": []
+    }
+  ]
+}

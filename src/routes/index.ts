@@ -23,21 +23,21 @@ import cache from './cache';
 
 const router = express.Router();
 
-/*---------------------------------------------------------*/
-router.use(apikey);
-/*---------------------------------------------------------*/
-/*---------------------------------------------------------*/
-router.use(permission(Permission.GENERAL));
-/*---------------------------------------------------------*/
+// Public routes (no API key required)
 router.use('/api/v1/signup', signup);
 router.use('/api/v1/login', login);
-router.use('/api/v1/logout', logout);
-router.use('/api/v1/token', token);
-router.use('/api/v1/credential', credential);
 router.use('/api/v1/auth/google', googleAuth);
-router.use('/api/v1/profile', profile);
 router.use('/api/v1/forgot-password', forgotPassword);
 router.use('/api/v1/reset-password', resetPassword);
+router.use('/api/v1/token', token);
+
+// Protected routes (API key required)
+router.use(apikey);
+router.use(permission(Permission.GENERAL));
+
+router.use('/api/v1/logout', logout);
+router.use('/api/v1/credential', credential);
+router.use('/api/v1/profile', profile);
 router.use('/api/v1/content', content);
 router.use('/api/v1/llm', llm);
 router.use('/api/v1/calendar', calendar);

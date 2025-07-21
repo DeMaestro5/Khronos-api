@@ -24,28 +24,28 @@ import cache from './cache';
 const router = express.Router();
 
 // Public routes (no API key required)
-router.use('/api/v1/signup', signup);
-router.use('/api/v1/login', login);
-router.use('/api/v1/auth/google', googleAuth);
-router.use('/api/v1/forgot-password', forgotPassword);
-router.use('/api/v1/reset-password', resetPassword);
-router.use('/api/v1/token', token);
+router.use('/signup', signup);
+router.use('/login', login);
+router.use('/auth/google', googleAuth);
+router.use('/forgot-password', forgotPassword);
+router.use('/reset-password', resetPassword);
+router.use('/token', token);
 
 // Protected routes (API key required)
 router.use(apikey);
 router.use(permission(Permission.GENERAL));
 
-router.use('/api/v1/logout', logout);
-router.use('/api/v1/credential', credential);
-router.use('/api/v1/profile', profile);
-router.use('/api/v1/content', content);
-router.use('/api/v1/llm', llm);
-router.use('/api/v1/calendar', calendar);
-router.use('/api/v1/chat', chat);
-router.use('/api/v1/analytics', analytics);
-router.use('/api/v1/notifications', notifications);
-router.use('/api/v1/trends', trend);
-router.use('/api/v1/settings', settings);
-router.use('/api/v1/cache', cache);
+router.use('/logout', logout);
+router.use('/credential', credential);
+router.use('/profile', profile);
+router.use('/content', content);
+router.use('/llm', llm);
+router.use('/calendar', calendar);
+router.use('/chat', chat);
+router.use('/analytics', analytics);
+router.use('/notifications', notifications);
+router.use('/trends', trend);
+router.use('/settings', settings);
+router.use('/cache', cache);
 
 export default router;

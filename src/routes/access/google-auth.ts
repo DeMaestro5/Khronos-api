@@ -35,36 +35,38 @@ router.get(
   '/callback',
   passport.authenticate('google', { session: false }),
   asyncHandler(async (req: PublicRequest, res) => {
-    const profile = req.user as any;
+    try {
+      const profile = req.user as any;
 
-    if (!profile) {
-      return res.status(400).json({
-        statusCode: '10001',
-        message: 'Google authentication failed',
-      });
+      if (!profile) {
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        const redirectUrl = `${frontendUrl}/auth/google-callback?error=auth_failed&message=Google authentication failed`;
+        return res.redirect(redirectUrl);
+      }
+
+      const { user, tokens, isNewUser } =
+        await GoogleAuthService.authenticateGoogleUser(profile);
+
+      // Redirect to frontend with tokens and user data
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      const redirectUrl = `${frontendUrl}/auth/google-callback?success=true&accessToken=${tokens.accessToken}&refreshToken=${tokens.refreshToken}&userId=${user._id}&isNewUser=${isNewUser}`;
+
+      res.redirect(redirectUrl);
+    } catch (error) {
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      const redirectUrl = `${frontendUrl}/auth/google-callback?error=auth_failed&message=${encodeURIComponent(
+        error instanceof Error ? error.message : 'Authentication failed',
+      )}`;
+      res.redirect(redirectUrl);
     }
-
-    const { user, tokens, isNewUser } =
-      await GoogleAuthService.authenticateGoogleUser(profile);
-
-    const message = isNewUser
-      ? 'Google signup successful'
-      : 'Google login successful';
-
-    new SuccessResponse(message, {
-      user,
-      tokens,
-      isNewUser,
-    }).send(res);
   }),
 );
 
 // Google OAuth failure route
 router.get('/failure', (req, res) => {
-  res.status(400).json({
-    statusCode: '10001',
-    message: 'Google authentication failed',
-  });
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const redirectUrl = `${frontendUrl}/auth/google-callback?error=auth_failed&message=Google authentication failed`;
+  res.redirect(redirectUrl);
 });
 
 export default router;

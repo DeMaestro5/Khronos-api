@@ -37,6 +37,7 @@ app.use((req, res, next) => {
 });
 
 // Updated CORS configuration to handle Next.js properly
+// Updated CORS configuration to handle Vercel domains properly
 const corsOptions = {
   origin: function (
     origin: string | undefined,
@@ -45,26 +46,36 @@ const corsOptions = {
     // Allow requests with no origin (like mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
 
-    // In development, be more permissive with localhost
-    if (environment === 'development') {
-      const developmentOrigins = [
-        'http://localhost:3000',
-        'http://127.0.0.1:3000',
-        corsUrl,
-      ].filter(Boolean);
+    // Define allowed origins
+    const allowedOrigins = [
+      'https://khronos-client.vercel.app', // Your main Vercel domain
+      corsUrl, // Your configured CORS URL from config
+      'http://localhost:3000', // Development
+      'http://127.0.0.1:3000', // Development alternative
+    ].filter(Boolean); // Remove any undefined values
 
-      const isAllowed = developmentOrigins.some(
-        (allowedOrigin) =>
-          origin === allowedOrigin ||
-          origin.startsWith(allowedOrigin as string),
-      );
+    // Check for exact matches first
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
 
-      if (isAllowed) {
+    // Check for Vercel preview deployments (*.vercel.app)
+    if (origin.endsWith('.vercel.app')) {
+      // You can add additional validation here if needed
+      // For example, check if it starts with your project name
+      if (origin.includes('khronos')) {
+        // Replace 'khronos' with your project name
         return callback(null, true);
       }
-    } else {
-      // In production, strictly use the configured CORS URL
-      if (origin === corsUrl) {
+    }
+
+    // In development, be more permissive
+    if (environment === 'development') {
+      // Allow any localhost with different ports
+      if (
+        origin.startsWith('http://localhost:') ||
+        origin.startsWith('http://127.0.0.1:')
+      ) {
         return callback(null, true);
       }
     }

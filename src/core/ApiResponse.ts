@@ -97,7 +97,10 @@ export class FailureMsgResponse extends ApiResponse {
 }
 
 export class SuccessResponse<T> extends ApiResponse {
-  constructor(message: string, private data: T) {
+  constructor(
+    message: string,
+    private data: T,
+  ) {
     super(StatusCode.SUCCESS, ResponseStatus.SUCCESS, message);
   }
 
@@ -128,6 +131,9 @@ export class TokenRefreshResponse extends ApiResponse {
     message: string,
     private accessToken: string,
     private refreshToken: string,
+    private accessTokenExpiresIn: number,
+    private refreshTokenExpiresIn: number,
+    private isRememberMe?: boolean,
   ) {
     super(StatusCode.SUCCESS, ResponseStatus.SUCCESS, message);
   }

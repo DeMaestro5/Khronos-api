@@ -20,4 +20,7 @@ declare interface ProtectedRequest extends RoleRequest {
 declare interface Tokens {
   accessToken: string;
   refreshToken: string;
+  accessTokenExpiresIn: number; // seconds
+  refreshTokenExpiresIn: number; // seconds
+  isRememberMe?: boolean; // indicates if this was a remember me login
 }

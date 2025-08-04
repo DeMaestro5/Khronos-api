@@ -64,5 +64,8 @@ export const createTokens = async (
   return {
     accessToken: accessToken,
     refreshToken: refreshToken,
+    accessTokenExpiresIn: tokenInfo.accessTokenValidity,
+    refreshTokenExpiresIn: refreshTokenValidity,
+    isRememberMe: rememberMe,
   } as Tokens;
 };

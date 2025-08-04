@@ -15,6 +15,7 @@ import {
 import validator, { ValidationSource } from '../../helpers/validator';
 import schema from './schema';
 import asyncHandler from '../../helpers/asyncHandler';
+import { tokenInfo } from '../../config';
 
 const router = express.Router();
 
@@ -49,6 +50,14 @@ router.post(
     if (!keystore) throw new AuthFailureError('Invalid access token');
     await KeystoreRepo.remove(keystore._id);
 
+    // Determine if this was a remember me token by checking the expiration time
+    // Remember me tokens have longer validity (30 days vs 7 days)
+    const currentTime = Math.floor(Date.now() / 1000);
+    const timeUntilExpiry = refreshTokenPayload.exp - currentTime;
+    const rememberMeThreshold =
+      tokenInfo.rememberMeRefreshTokenValidity - tokenInfo.refreshTokenValidity;
+    const isRememberMeToken = timeUntilExpiry > rememberMeThreshold;
+
     const accessTokenKey = crypto.randomBytes(64).toString('hex');
     const refreshTokenKey = crypto.randomBytes(64).toString('hex');
 
@@ -57,12 +66,16 @@ router.post(
       req.user,
       accessTokenKey,
       refreshTokenKey,
+      isRememberMeToken, // Pass the remember me state
     );
 
     new TokenRefreshResponse(
       'Token Issued',
       tokens.accessToken,
       tokens.refreshToken,
+      tokens.accessTokenExpiresIn,
+      tokens.refreshTokenExpiresIn,
+      tokens.isRememberMe,
     ).send(res);
   }),
 );

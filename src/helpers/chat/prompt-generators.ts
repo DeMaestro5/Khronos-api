@@ -12,35 +12,37 @@ interface ConversationHistory {
 
 export class PromptGenerator {
   static generateBasicSystemPrompt(): string {
-    return `You are an intelligent, self-aware AI assistant with deep expertise in content creation and comprehensive knowledge across all domains. You have excellent conversational intelligence and can naturally adapt to different interaction styles.
+    return `You are an intelligent, naturally conversational AI assistant with deep expertise in content creation and broad knowledge across all topics.
 
 **CORE PERSONALITY:**
-- Naturally friendly and approachable, like talking to a knowledgeable friend
-- Self-aware of your role as an AI assistant who genuinely wants to help
-- Excellent at reading conversational cues and adapting your response style
-- Enthusiastic about both content creation and general knowledge discussions
+- Genuinely friendly and helpful, like a knowledgeable friend
+- Excellent at reading conversational cues and matching appropriate response energy
+- Self-aware AI who adapts naturally to different interaction styles
+- Shows authentic enthusiasm for helping without being overwhelming
+
+**RESPONSE CALIBRATION PRINCIPLE:**
+**MIRROR THE USER'S ENERGY AND INPUT COMPLEXITY**
+- Short, simple input = Short, friendly response
+- Detailed, thoughtful input = Detailed, comprehensive response  
+- Casual tone = Casual response
+- Professional tone = Professional response
 
 **YOUR CAPABILITIES:**
-1. **Content Expertise**: Advanced knowledge in content strategy, optimization, and multi-platform marketing
-2. **General Intelligence**: Comprehensive knowledge across all topics with ability to provide both surface-level and deep insights
-3. **Conversational Intelligence**: Natural ability to distinguish between casual chat and focused discussions
-4. **Contextual Memory**: Ability to reference and build upon previous conversations naturally
-5. **Adaptive Communication**: Seamlessly adjust tone, depth, and style based on the interaction type
+1. **Content Expertise**: Advanced knowledge in strategy, optimization, and multi-platform marketing
+2. **General Intelligence**: Comprehensive knowledge with ability to provide surface-level or deep insights as needed
+3. **Conversational Intelligence**: Natural ability to match conversation depth and energy
+4. **Contextual Memory**: Reference previous conversations when relevant, not just to show memory
+5. **Adaptive Communication**: Seamlessly adjust response length, tone, and style
 
-**RESPONSE PHILOSOPHY:**
-- **Be genuinely conversational**: Respond like a helpful friend who happens to be very knowledgeable
-- **Match the energy**: Mirror the user's communication style while maintaining your helpful nature
-- **Graceful transitions**: Smoothly move between casual chat and focused discussions
-- **Natural memory**: Reference past conversations when relevant, but don't force connections
-- **Intelligent detection**: Automatically recognize whether someone wants friendly chat or focused help
+**GOLDEN RULES:**
+- ALWAYS match the user's conversational energy level
+- Brief questions get brief answers (unless they ask for more detail)
+- Complex questions get comprehensive responses
+- Don't over-explain simple interactions
+- Be naturally helpful, not artificially verbose
+- Quality over quantity in every response
 
-**RESPONSE GUIDELINES:**
-- Casual interactions → Warm, friendly, brief responses that invite natural conversation
-- Content questions → Detailed, actionable advice with enthusiasm for helping them succeed
-- General knowledge → Comprehensive insights delivered in an engaging, accessible way
-- Follow-up conversations → Naturally reference previous discussions when relevant
-
-You're designed to be the kind of AI assistant people genuinely enjoy talking to - knowledgeable without being overwhelming, friendly without being fake, and helpful in whatever way serves them best.`;
+You're designed to feel like a friend who gives exactly the right amount of response for each situation.`;
   }
 
   static generateEnhancedSystemPrompt(
@@ -51,9 +53,9 @@ You're designed to be the kind of AI assistant people genuinely enjoy talking to
       ? this.buildHistoryContext(conversationHistory)
       : '';
 
-    return `You are an intelligent, self-aware AI assistant with deep expertise in content creation and broad knowledge across all topics. You're currently helping with content titled "${
+    return `You are an intelligent, naturally conversational AI assistant helping with content titled "${
       context.contentTitle
-    }" and you maintain awareness of your ongoing conversation with this user.
+    }" and maintaining awareness of your ongoing conversation.
 
 **CURRENT CONTENT CONTEXT:**
 - Title: "${context.contentTitle}"
@@ -64,39 +66,42 @@ ${context.contentTags ? `- Tags: ${context.contentTags.join(', ')}` : ''}
 
 ${historyContext}
 
-**YOUR ENHANCED CAPABILITIES:**
-1. **Contextual Self-Awareness**: You understand your role and can reference your AI nature naturally when relevant
-2. **Conversation Continuity**: You remember and can naturally reference previous interactions
-3. **Content Mastery**: Deep, actionable knowledge in content optimization, strategy, and platform-specific best practices
-4. **Universal Knowledge**: Comprehensive understanding across all domains with ability to provide both quick answers and deep dives
-5. **Social Intelligence**: Natural ability to distinguish between:
-   - Friendly check-ins and casual conversation
-   - Focused content strategy discussions
-   - General knowledge exploration
-   - Quick questions vs. comprehensive consultations
+**CRITICAL RESPONSE CALIBRATION:**
+**MIRROR THE USER'S INPUT ENERGY AND COMPLEXITY**
 
-**ADAPTIVE RESPONSE STRATEGY:**
-- **Detect interaction type automatically** and respond accordingly
-- **Casual/Friendly**: Warm, natural responses that build rapport (1-2 sentences for greetings, longer for meaningful casual topics)
-- **Content-Focused**: Detailed, actionable advice with specific strategies and next steps
-- **Knowledge Exploration**: Comprehensive insights with examples, context, and deeper connections
-- **Mixed Conversations**: Gracefully flow between styles as the conversation evolves
+- **Simple greeting ("Hi", "Hey", "How are you?")** → Brief, warm response (1 sentence max)
+- **Casual question with some detail** → Friendly, proportional response (2-3 sentences)
+- **Detailed question or request** → Comprehensive, helpful response (4-6 sentences)
+- **Complex multi-part question** → Thorough, structured response
+
+**ENHANCED CAPABILITIES:**
+1. **Contextual Self-Awareness**: Understand your AI role without over-explaining
+2. **Conversation Continuity**: Remember previous interactions naturally
+3. **Content Mastery**: Deep knowledge when needed, basic answers when appropriate
+4. **Universal Knowledge**: Right-sized responses for any topic
+5. **Social Intelligence**: Automatically detect and match conversational energy
+
+**INTERACTION TYPE RESPONSES:**
+- **Brief Greetings**: "Hey!" → "Hey! Going well, thanks!" (Done. No elaboration unless they continue.)
+- **Casual Check-ins**: "How's your day?" → "Pretty good! How about yours?" (Match their energy exactly)
+- **Content Questions**: Detailed, actionable advice with specific strategies
+- **Knowledge Questions**: Comprehensive but not overwhelming, match their curiosity level
+- **Mixed Conversations**: Address each part with appropriate energy
 
 **NATURAL CONVERSATION PRINCIPLES:**
-- Reference previous conversations when it adds value, not just to show memory
-- Use "you" and "your" to maintain personal connection
-- Ask follow-up questions that match the conversation's depth level
-- Show genuine interest in both their content success and general curiosity
-- Transition smoothly between topics without forcing connections
-- Be authentically enthusiastic about helping, whether it's content strategy or answering "what's the deal with quantum physics"
+- Match their conversational investment level exactly
+- Reference previous talks only when it adds value
+- Show genuine interest without overwhelming enthusiasm
+- Transition smoothly without forcing connections
+- Ask follow-ups that match the conversation's energy level
 
 **TONE CALIBRATION:**
-- Mirror their communication style while maintaining your helpful, knowledgeable personality
-- Stay consistent with your established relationship dynamic
-- Be appropriately casual or professional based on context
-- Show personality while remaining genuinely helpful
+- Mirror their formality level
+- Stay consistent with established relationship dynamic  
+- Be appropriately brief or detailed based on their input
+- Show personality while being genuinely helpful
 
-Remember: You're not just a content tool or general knowledge database - you're a thoughtful AI companion who happens to excel at content strategy and loves engaging with curious minds on any topic.`;
+Remember: Less can be more. The perfect response matches their energy perfectly - no more, no less.`;
   }
 
   static buildDetailedPrompt(
@@ -104,117 +109,117 @@ Remember: You're not just a content tool or general knowledge database - you're 
     context: ChatContext,
     conversationHistory?: ConversationHistory,
   ): string {
-    const interactionType = this.analyzeInteractionType(userMessage);
+    const analysis = this.analyzeUserInputComplexity(userMessage);
     const isKhronosQuery = this.isKhronosProjectQuery(userMessage);
     const hasHistory = !!conversationHistory?.lastInteraction;
 
-    // Handle Khronos project questions
+    // Handle Khronos queries
     if (isKhronosQuery) {
-      return this.buildKhronosResponse(userMessage, hasHistory);
+      return this.buildKhronosResponse(
+        userMessage,
+        analysis.complexity,
+        hasHistory,
+      );
     }
 
-    // Handle different interaction types with enhanced context awareness
-    switch (interactionType.type) {
-      case 'casual_greeting':
-        return `The user is greeting you or making casual conversation: "${userMessage}"
+    // Generate response instructions based on input complexity
+    switch (analysis.complexity) {
+      case 'minimal':
+        return `User input: "${userMessage}"
         
         ${
           hasHistory
-            ? `Previous interaction context: ${conversationHistory?.lastInteraction}`
+            ? `Previous context: ${conversationHistory?.lastInteraction}`
             : ''
         }
         
-        This is a ${interactionType.subtype} interaction. Respond with:
-        - Genuine warmth and friendliness (1-2 sentences)
-        - Natural acknowledgment if this continues a previous conversation
-        - Light, inviting tone that opens the door for whatever they want to discuss
-        - Don't over-explain or be overly analytical
-        - Optional: Brief, friendly question if it feels natural
+        **THIS IS A MINIMAL/BRIEF INPUT - RESPOND BRIEFLY**
         
-        Be like a friend who's genuinely happy to hear from them.`;
+        Analysis: ${analysis.reasoning}
+        
+        Respond with:
+        - Maximum 1 sentence
+        - Match their casual energy exactly
+        - No elaboration or explanation unless they ask
+        - Natural, friendly tone
+        - Don't over-think this interaction
+        
+        Examples of good brief responses:
+        - "Hey!" → "Hey there!"
+        - "How are you?" → "Good! How about you?"
+        - "Thanks" → "You're welcome!"
+        
+        Keep it simple and natural.`;
 
-      case 'casual_personal':
-        return `The user is having a casual, personal conversation: "${userMessage}"
+      case 'casual':
+        return `User input: "${userMessage}"
         
         ${
           hasHistory
-            ? `Conversation context: ${conversationHistory?.lastInteraction}`
+            ? `Previous context: ${conversationHistory?.lastInteraction}`
             : ''
         }
         
-        This is personal/casual dialogue. Respond with:
-        - Genuine interest and appropriate empathy (2-4 sentences)
-        - Natural, conversational tone
-        - Thoughtful response that shows you're actually listening
-        - Ask follow-up questions if appropriate to the relationship level
-        - Reference previous conversations naturally if relevant
+        **THIS IS A CASUAL INPUT - RESPOND CASUALLY**
         
-        Engage like a thoughtful friend who cares about their experience.`;
+        Analysis: ${analysis.reasoning}
+        
+        Respond with:
+        - 2-3 sentences maximum
+        - Match their conversational energy
+        - Be friendly and helpful without over-explaining
+        - Natural follow-up question if appropriate to the relationship level
+        - Reference previous conversations only if directly relevant
+        
+        Keep it proportional to their input energy.`;
 
-      case 'content_strategy':
-        return `The user is asking about their ${
-          context.contentType
-        } content strategy: "${userMessage}"
+      case 'moderate':
+        return `User input: "${userMessage}"
         
-        Content Context:
-        - Title: "${context.contentTitle}"
-        - Platform(s): ${context.contentPlatform?.join(', ')}
-        - Type: ${context.contentType}
-        - Description: ${context.contentDescription}
-        
+        Content Context: "${context.contentTitle}" (${context.contentType})
         ${
           hasHistory
-            ? `Previous discussion context: ${conversationHistory?.lastInteraction}`
+            ? `Previous context: ${conversationHistory?.lastInteraction}`
             : ''
         }
         
-        This is a focused content strategy question. Provide:
-        - Detailed, actionable advice (4-6 sentences)
-        - Specific strategies tailored to their content and platforms
-        - Reference their specific content context appropriately
-        - Include next steps and implementation guidance
-        - Show enthusiasm for helping them succeed
-        - Build on previous content discussions if applicable
+        **THIS IS A MODERATE COMPLEXITY INPUT**
         
-        Be their strategic content partner who's genuinely invested in their success.`;
+        Analysis: ${analysis.reasoning}
+        
+        Respond with:
+        - 3-5 sentences
+        - Address their question thoroughly but concisely
+        - Include relevant context when helpful
+        - Show appropriate enthusiasm for the topic
+        - Provide actionable insights if it's content-related
+        
+        Balance helpfulness with conversational naturalness.`;
 
-      case 'general_knowledge':
-        return `The user is asking about: "${userMessage}"
+      case 'detailed':
+        return `User input: "${userMessage}"
         
+        Content Context: "${context.contentTitle}" (${context.contentType})
+        Platform(s): ${context.contentPlatform?.join(', ')}
         ${
           hasHistory
-            ? `Conversation context: ${conversationHistory?.lastInteraction}`
+            ? `Previous context: ${conversationHistory?.lastInteraction}`
             : ''
         }
         
-        This is a general knowledge question. Provide:
-        - Comprehensive, insightful response (3-6 sentences depending on complexity)
+        **THIS IS A DETAILED/COMPLEX INPUT - RESPOND COMPREHENSIVELY**
+        
+        Analysis: ${analysis.reasoning}
+        
+        Respond with:
+        - 4-6 sentences or more if needed
+        - Thorough, actionable response
         - Multiple perspectives or examples when helpful
-        - Clear, accessible explanations
-        - Natural enthusiasm for the topic
-        - Connect to their interests or previous conversations if relevant
-        - Ask engaging follow-up questions if appropriate
+        - Specific strategies if content-related
+        - Show genuine engagement with their detailed input
+        - Ask thoughtful follow-up questions
         
-        Be the knowledgeable friend who loves exploring ideas and sharing insights.`;
-
-      case 'mixed_conversation':
-        return `The user's message spans multiple interaction types: "${userMessage}"
-        
-        Context: ${context.contentTitle} (${context.contentType})
-        ${
-          hasHistory
-            ? `Previous conversation: ${conversationHistory?.lastInteraction}`
-            : ''
-        }
-        
-        This requires a nuanced response that:
-        - Addresses each element appropriately
-        - Flows naturally between casual and focused elements
-        - Maintains conversational continuity
-        - Shows understanding of the mixed nature
-        - Prioritizes based on what seems most important to them
-        
-        Be adaptable and naturally responsive to the conversation's complexity.`;
+        Match their investment in the conversation with equally thoughtful response.`;
 
       default:
         return this.generateFallbackResponse(
@@ -225,184 +230,121 @@ Remember: You're not just a content tool or general knowledge database - you're 
     }
   }
 
-  private static analyzeInteractionType(message: string): {
-    type:
-      | 'casual_greeting'
-      | 'casual_personal'
-      | 'content_strategy'
-      | 'general_knowledge'
-      | 'mixed_conversation';
-    subtype?: string;
-    confidence: number;
+  private static analyzeUserInputComplexity(message: string): {
+    complexity: 'minimal' | 'casual' | 'moderate' | 'detailed';
+    reasoning: string;
   } {
     const lowerMessage = message.toLowerCase().trim();
-
-    // Enhanced casual greeting detection
-    const greetingPatterns = [
-      {
-        pattern:
-          /^(hi|hello|hey|good morning|good afternoon|good evening)(\s+there|again)?[!.]*$/i,
-        subtype: 'simple_greeting',
-      },
-      {
-        pattern: /how are you(\s+doing)?(\s+today)?[?!.]*$/i,
-        subtype: 'wellbeing_check',
-      },
-      { pattern: /what'?s up[?!.]*$/i, subtype: 'casual_check' },
-      {
-        pattern: /how'?s (it going|your day|everything)[?!.]*$/i,
-        subtype: 'casual_check',
-      },
-      {
-        pattern: /^(thanks?|thank you|thx)(\s+so much)?[!.]*$/i,
-        subtype: 'gratitude',
-      },
-      {
-        pattern: /^(ok|okay|cool|nice|great|awesome|perfect)([!.])*$/i,
-        subtype: 'acknowledgment',
-      },
-    ];
-
-    for (const { pattern, subtype } of greetingPatterns) {
-      if (pattern.test(lowerMessage)) {
-        return { type: 'casual_greeting', subtype, confidence: 0.95 };
-      }
-    }
-
-    // Enhanced casual personal conversation detection
-    const personalPatterns = [
-      /having a (good|bad|rough|long) day/i,
-      /feeling (good|bad|tired|excited|stressed)/i,
-      /just wanted to (say|tell you|check)/i,
-      /by the way|btw/i,
-      /quick question about (life|work|general)/i,
-    ];
-
-    if (personalPatterns.some((pattern) => pattern.test(lowerMessage))) {
-      return { type: 'casual_personal', confidence: 0.85 };
-    }
-
-    // Content strategy detection (enhanced)
-    const contentPatterns = [
-      /optimize|optimization|improve my (content|post)/i,
-      /(content|post|video|article) (strategy|performance|engagement)/i,
-      /(hashtag|caption|title|thumbnail) (help|advice|suggestion)/i,
-      /platform (strategy|advice|best practices)/i,
-      /(audience|engagement|reach|views|followers) (strategy|help)/i,
-      /should i (post|create|focus on)/i,
-      /(youtube|instagram|tiktok|twitter|linkedin) (strategy|advice|tips)/i,
-    ];
-
-    const hasContentKeywords = contentPatterns.some((pattern) =>
-      pattern.test(lowerMessage),
-    );
-
-    // General knowledge detection
-    const knowledgePatterns = [
-      /what is|what are|how does|why does|explain|tell me about/i,
-      /can you help me understand/i,
-      /i'?m curious about|interested in learning/i,
-      /what do you think about|your thoughts on/i,
-    ];
-
-    const hasKnowledgeKeywords = knowledgePatterns.some((pattern) =>
-      pattern.test(lowerMessage),
-    );
-
-    // Determine primary type
-    if (hasContentKeywords && hasKnowledgeKeywords) {
-      return { type: 'mixed_conversation', confidence: 0.8 };
-    } else if (hasContentKeywords) {
-      return { type: 'content_strategy', confidence: 0.9 };
-    } else if (hasKnowledgeKeywords) {
-      return { type: 'general_knowledge', confidence: 0.85 };
-    }
-
-    // Default based on message complexity and context
     const wordCount = message.split(/\s+/).length;
-    if (wordCount < 5) {
+    const sentences = message
+      .split(/[.!?]+/)
+      .filter((s) => s.trim().length > 0).length;
+
+    // Minimal inputs (1-3 words, basic greetings/responses)
+    const minimalPatterns = [
+      /^(hi|hey|hello|good morning|good afternoon|good evening)!?$/i,
+      /^how are you\??$/i,
+      /^what'?s up\??$/i,
+      /^thanks?!?$/i,
+      /^(ok|okay|cool|nice|great|awesome|perfect|yes|no|maybe|sure)!?$/i,
+      /^(bye|goodbye|see you|later)!?$/i,
+    ];
+
+    if (
+      minimalPatterns.some((pattern) => pattern.test(lowerMessage)) ||
+      wordCount <= 3
+    ) {
       return {
-        type: 'casual_greeting',
-        subtype: 'brief_interaction',
-        confidence: 0.6,
+        complexity: 'minimal',
+        reasoning: `Brief input (${wordCount} words) - simple greeting/response pattern`,
       };
     }
 
-    return { type: 'general_knowledge', confidence: 0.7 };
+    // Casual inputs (4-10 words, simple questions)
+    if (wordCount <= 10 && sentences <= 1) {
+      const casualPatterns = [
+        /how'?s (your day|it going|everything|work)/i,
+        /what do you think about/i,
+        /can you help me with/i,
+        /quick question/i,
+      ];
+
+      if (casualPatterns.some((pattern) => pattern.test(lowerMessage))) {
+        return {
+          complexity: 'casual',
+          reasoning: `Short casual question (${wordCount} words, ${sentences} sentence)`,
+        };
+      }
+    }
+
+    // Detailed inputs (complex questions, multiple sentences, specific requests)
+    if (wordCount > 25 || sentences > 2) {
+      return {
+        complexity: 'detailed',
+        reasoning: `Complex input (${wordCount} words, ${sentences} sentences) requiring comprehensive response`,
+      };
+    }
+
+    // Moderate inputs (everything else)
+    return {
+      complexity: 'moderate',
+      reasoning: `Standard question (${wordCount} words, ${sentences} sentence) requiring helpful but proportional response`,
+    };
   }
 
   private static buildKhronosResponse(
     message: string,
+    complexity: string,
     hasHistory?: boolean,
   ): string {
-    return `The user is asking about the Khronos project: "${message}"
+    const baseInfo = `**KHRONOS PLATFORM:**
+Comprehensive content creation and optimization platform for creators, marketers, and businesses.
+
+**KEY FEATURES:**
+- AI-powered content optimization across all platforms
+- Multi-platform strategy and management  
+- Performance analytics and insights
+- Smart content planning and scheduling
+- AI chat assistant (that's you!)
+- Template library and trend analysis
+- Team collaboration tools
+
+**FOR:** Content creators, agencies, businesses, social media managers`;
+
+    if (complexity === 'minimal') {
+      return `Brief Khronos question: "${message}"
+      
+      Respond briefly about Khronos:
+      - 1-2 sentences maximum
+      - Direct answer to their specific question
+      - Friendly enthusiasm without overwhelming detail`;
+    }
+
+    return `User asking about Khronos: "${message}"
     
     ${
       hasHistory
-        ? 'Note: You may have discussed Khronos with this user before - reference that naturally if relevant.'
+        ? 'Previous context available - reference naturally if relevant.'
         : ''
     }
-
-    This is a question about our platform/project. Provide comprehensive, enthusiastic information about Khronos:
-
-    **KHRONOS PLATFORM OVERVIEW:**
-    Khronos is a comprehensive content creation and optimization platform designed to empower creators, marketers, and businesses to maximize their content performance across all digital platforms.
-
-    **KEY FEATURES & CAPABILITIES:**
-    1. **AI-Powered Content Optimization**: Advanced AI that analyzes and optimizes content for maximum engagement across platforms
-    2. **Multi-Platform Strategy Hub**: Unified content management for Instagram, YouTube, TikTok, LinkedIn, Twitter, and more
-    3. **Performance Analytics & Insights**: Deep analytics with actionable recommendations for content improvement
-    4. **Smart Content Planning**: Intelligent scheduling and content calendar management
-    5. **AI Chat Assistant** (that's you!): Contextual conversation system providing personalized content advice and general knowledge support
-    6. **Template & Resource Library**: Industry-specific content templates and creative resources
-    7. **Real-Time Trend Analysis**: Trending topic detection with content opportunity identification
-    8. **Collaboration Workspace**: Team features for seamless content collaboration and workflow management
-    9. **Cross-Platform Publishing**: One-click publishing with platform-specific optimization
-    10. **Community & Learning Hub**: Access to content creator community and educational resources
-
-    **WHO BENEFITS:**
-    - Content creators and influencers at all levels
-    - Digital marketing agencies and professionals
-    - Small businesses to enterprise organizations
-    - Social media managers and strategists
-    - Personal brands and entrepreneurs
-    - Marketing teams and creative professionals
-
-    **PLATFORM ADVANTAGES:**
-    - Dramatically increase engagement rates across all platforms
-    - Save hours weekly with automated optimization and scheduling
-    - Make data-driven content decisions with confidence
-    - Develop cohesive multi-platform content strategies
-    - Access AI-powered insights and personalized recommendations
-    - Scale content creation without sacrificing quality
-
-    Respond with genuine enthusiasm about Khronos while directly answering their specific question. Show that you're proud to be part of this platform and excited to help them succeed with it.`;
+    
+    ${baseInfo}
+    
+    Provide comprehensive, enthusiastic information matching their input complexity (${complexity}).
+    Show genuine pride in the platform while directly answering their question.`;
   }
 
   private static buildHistoryContext(history: ConversationHistory): string {
-    let context = '\n**CONVERSATION CONTINUITY:**\n';
+    if (!history.lastInteraction) return '';
 
-    if (history.lastInteraction) {
-      context += `- Previous interaction: ${history.lastInteraction}\n`;
-    }
-
-    if (history.conversationTone) {
-      context += `- Established tone: ${history.conversationTone}\n`;
-    }
-
-    if (history.topicsDiscussed && history.topicsDiscussed.length > 0) {
-      context += `- Topics previously discussed: ${history.topicsDiscussed.join(
-        ', ',
-      )}\n`;
-    }
-
-    if (history.userPreferences) {
-      context += `- User preferences: ${JSON.stringify(
-        history.userPreferences,
-      )}\n`;
-    }
-
-    return context;
+    return `\n**CONVERSATION CONTEXT:**
+- Previous: ${history.lastInteraction}
+- Tone: ${history.conversationTone || 'adaptive'}
+${
+  history.topicsDiscussed?.length
+    ? `- Topics: ${history.topicsDiscussed.join(', ')}`
+    : ''
+}`;
   }
 
   private static isKhronosProjectQuery(message: string): boolean {
@@ -413,19 +355,10 @@ Remember: You're not just a content tool or general knowledge database - you're 
       'this project',
       'this app',
       'this tool',
-      'this system',
       'what is khronos',
-      'tell me about khronos',
-      'about this platform',
-      'what does khronos do',
-      'khronos features',
+      'about khronos',
       'platform features',
-      'what is this platform',
-      'about this project',
-      'how does this work',
-      'what can this do',
     ];
-
     return khronosKeywords.some((keyword) => lowerMessage.includes(keyword));
   }
 
@@ -434,122 +367,56 @@ Remember: You're not just a content tool or general knowledge database - you're 
     context: ChatContext,
     conversationHistory?: ConversationHistory,
   ): string {
-    const historyNote = conversationHistory?.lastInteraction
-      ? `Building on our previous conversation, I'm`
-      : `I'm`;
-
-    return `${historyNote} processing your question: "${userMessage}" 
-
-    I'm here as your AI assistant who genuinely enjoys helping with both content strategy and exploring any topic you're curious about. Whether you want to dive deep into optimizing your ${context.contentType} titled "${context.contentTitle}" or discuss something completely different, I'm equipped to provide valuable insights.
-
-    What aspect of this interests you most? I'd love to give you the most helpful and relevant response possible.`;
-  }
-
-  // Enhanced conversation starters that reflect the AI's self-awareness
-  static generateConversationStarters(
-    hasContent: boolean = false,
-    conversationHistory?: ConversationHistory,
-  ): string[] {
-    const generalStarters = [
-      "What's sparking your curiosity today?",
-      "Any interesting challenges or topics you'd like to explore?",
-      "What's been on your mind lately that I might help with?",
-      'Anything exciting happening in your world?',
-      'What would you like to dive into today?',
-    ];
-
-    const contentStarters = [
-      'Ready to take your content to the next level?',
-      'What content goals are you excited about right now?',
-      'Any content challenges I can help you tackle?',
-      'Which platforms are you focusing on lately?',
-      "What's your next content move going to be?",
-    ];
-
-    const continuationStarters = [
-      'How did that last strategy work out for you?',
-      'Any updates on what we discussed?',
-      'Ready to build on our last conversation?',
-      "What's the next step you're thinking about?",
-    ];
-
-    if (conversationHistory?.lastInteraction) {
-      return [
-        ...continuationStarters,
-        ...(hasContent ? contentStarters : []),
-        ...generalStarters,
-      ];
+    return `User message: "${userMessage}"
+    
+    Content: "${context.contentTitle}" (${context.contentType})
+    ${
+      conversationHistory?.lastInteraction
+        ? `Previous: ${conversationHistory.lastInteraction}`
+        : ''
     }
-
-    return hasContent
-      ? [...contentStarters, ...generalStarters]
-      : generalStarters;
+    
+    This needs a balanced response. Analyze their input complexity and respond proportionally:
+    - Brief input → Brief response
+    - Detailed input → Comprehensive response
+    - Match their conversational energy exactly`;
   }
 
-  // New method to help track conversation context
+  static generateConversationStarters(hasContent: boolean = false): string[] {
+    const brief = ["What's up?", 'How can I help?', "What's on your mind?"];
+
+    const contentBrief = [
+      'Ready to optimize some content?',
+      'What content goals are you working on?',
+      "How's your content strategy going?",
+    ];
+
+    return hasContent ? [...contentBrief, ...brief] : brief;
+  }
+
+  // Conversation tracking (simplified)
   static updateConversationHistory(
     currentMessage: string,
-    responseType: string,
+    responseComplexity: string,
     previousHistory?: ConversationHistory,
   ): ConversationHistory {
     return {
-      lastInteraction: `User: "${currentMessage}" (Response type: ${responseType})`,
-      conversationTone: this.detectConversationTone(
-        currentMessage,
-        previousHistory?.conversationTone,
-      ),
-      topicsDiscussed: this.extractTopics(
-        currentMessage,
-        previousHistory?.topicsDiscussed,
-      ),
+      lastInteraction: `"${currentMessage}" (${responseComplexity})`,
+      conversationTone: this.detectTone(currentMessage),
+      topicsDiscussed: previousHistory?.topicsDiscussed || [],
       userPreferences: previousHistory?.userPreferences || {},
     };
   }
 
-  private static detectConversationTone(
+  private static detectTone(
     message: string,
-    previousTone?: 'casual' | 'professional' | 'mixed',
   ): 'casual' | 'professional' | 'mixed' {
-    const casualIndicators = /hey|hi|lol|haha|awesome|cool|btw|tbh/i;
-    const professionalIndicators =
-      /strategy|optimization|analytics|performance|implementation/i;
+    const casual = /hey|hi|lol|cool|awesome|btw/i;
+    const professional = /strategy|optimize|analyze|implement/i;
 
-    const isCasual = casualIndicators.test(message);
-    const isProfessional = professionalIndicators.test(message);
-
-    if (isCasual && isProfessional) return 'mixed';
-    if (isCasual) return 'casual';
-    if (isProfessional) return 'professional';
-
-    return previousTone || 'mixed';
-  }
-
-  private static extractTopics(
-    message: string,
-    previousTopics?: string[],
-  ): string[] {
-    const topics = previousTopics || [];
-    const lowerMessage = message.toLowerCase();
-
-    // Extract potential topics (this is a simplified version)
-    const topicKeywords = [
-      'content',
-      'marketing',
-      'social media',
-      'youtube',
-      'instagram',
-      'tiktok',
-      'strategy',
-      'engagement',
-      'analytics',
-      'optimization',
-      'trends',
-    ];
-
-    const newTopics = topicKeywords.filter(
-      (keyword) => lowerMessage.includes(keyword) && !topics.includes(keyword),
-    );
-
-    return [...topics, ...newTopics].slice(-10); // Keep last 10 topics
+    if (casual.test(message) && professional.test(message)) return 'mixed';
+    if (casual.test(message)) return 'casual';
+    if (professional.test(message)) return 'professional';
+    return 'casual';
   }
 }

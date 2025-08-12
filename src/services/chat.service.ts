@@ -318,6 +318,7 @@ export class ChatService {
         session.metadata.context || '{}',
       ) as ChatContext;
 
+      const analysis = PromptGenerator.analyzeUserInputComplexity(userMessage);
       const detailedPrompt = PromptGenerator.buildDetailedPrompt(
         userMessage,
         context,
@@ -337,7 +338,11 @@ export class ChatService {
       return {
         message:
           response ||
-          PromptGenerator.generateFallbackResponse(userMessage, context),
+          PromptGenerator.generateFallbackResponse(
+            userMessage,
+            context,
+            analysis,
+          ),
         tokens: this.estimateTokens(response || ''),
         model: session.settings.model || 'gpt-4o-mini',
         suggestions,

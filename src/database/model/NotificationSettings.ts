@@ -13,7 +13,15 @@ export default interface NotificationSettings {
   performanceAlerts: boolean;
   trendUpdates: boolean;
   systemUpdates: boolean;
+  // Additional user-visible toggles
+  securityAlerts?: boolean;
+  productUpdates?: boolean;
+  messages?: boolean;
+  reminders?: boolean;
+  marketing?: boolean;
+  reports?: boolean;
   quietHours?: {
+    enabled?: boolean;
     start: string;
     end: string;
   };
@@ -57,7 +65,36 @@ const schema = new Schema<NotificationSettings>(
       type: Schema.Types.Boolean,
       default: true,
     },
+    // Additional toggles with sensible defaults
+    securityAlerts: {
+      type: Schema.Types.Boolean,
+      default: true,
+    },
+    productUpdates: {
+      type: Schema.Types.Boolean,
+      default: true,
+    },
+    messages: {
+      type: Schema.Types.Boolean,
+      default: true,
+    },
+    reminders: {
+      type: Schema.Types.Boolean,
+      default: true,
+    },
+    marketing: {
+      type: Schema.Types.Boolean,
+      default: false,
+    },
+    reports: {
+      type: Schema.Types.Boolean,
+      default: true,
+    },
     quietHours: {
+      enabled: {
+        type: Schema.Types.Boolean,
+        default: false,
+      },
       start: {
         type: Schema.Types.String,
         default: '22:00',

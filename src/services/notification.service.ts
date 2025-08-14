@@ -116,6 +116,7 @@ export class NotificationService {
   }
 
   async generatePerformanceAlert(
+    userId: Types.ObjectId,
     contentId: Types.ObjectId,
     metrics: Record<string, number>,
     threshold: number,
@@ -127,18 +128,14 @@ export class NotificationService {
         threshold,
       );
 
-      return {
-        _id: new Types.ObjectId(),
-        userId: new Types.ObjectId(), // Replace with actual user ID
-        type: NotificationType.PERFORMANCE,
-        title: 'Performance Alert',
-        message: alert,
-        priority: NotificationPriority.HIGH,
-        status: NotificationStatus.UNREAD,
-        data: { contentId, metrics, threshold },
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      return await this.createNotification(
+        userId,
+        NotificationType.PERFORMANCE,
+        'Performance Alert',
+        alert,
+        NotificationPriority.HIGH,
+        { contentId, metrics, threshold },
+      );
     } catch (error) {
       console.error('Error generating performance alert:', error);
       throw new Error('Failed to generate performance alert');
@@ -146,6 +143,7 @@ export class NotificationService {
   }
 
   async generateTrendAlert(
+    userId: Types.ObjectId,
     trend: string,
     platform: string,
     growth: number,
@@ -157,18 +155,14 @@ export class NotificationService {
         growth,
       );
 
-      return {
-        _id: new Types.ObjectId(),
-        userId: new Types.ObjectId(), // Replace with actual user ID
-        type: NotificationType.TREND,
-        title: 'Trend Alert',
-        message: alert,
-        priority: NotificationPriority.MEDIUM,
-        status: NotificationStatus.UNREAD,
-        data: { trend, platform, growth },
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      return await this.createNotification(
+        userId,
+        NotificationType.TREND,
+        'Trend Alert',
+        alert,
+        NotificationPriority.MEDIUM,
+        { trend, platform, growth },
+      );
     } catch (error) {
       console.error('Error generating trend alert:', error);
       throw new Error('Failed to generate trend alert');
@@ -176,6 +170,7 @@ export class NotificationService {
   }
 
   async generateScheduleReminder(
+    userId: Types.ObjectId,
     contentId: Types.ObjectId,
     scheduledTime: Date,
     platform: string,
@@ -187,18 +182,14 @@ export class NotificationService {
         platform,
       );
 
-      return {
-        _id: new Types.ObjectId(),
-        userId: new Types.ObjectId(), // Replace with actual user ID
-        type: NotificationType.SCHEDULE,
-        title: 'Schedule Reminder',
-        message: reminder,
-        priority: NotificationPriority.HIGH,
-        status: NotificationStatus.UNREAD,
-        data: { contentId, scheduledTime, platform },
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      return await this.createNotification(
+        userId,
+        NotificationType.SCHEDULE,
+        'Schedule Reminder',
+        reminder,
+        NotificationPriority.HIGH,
+        { contentId, scheduledTime, platform },
+      );
     } catch (error) {
       console.error('Error generating schedule reminder:', error);
       throw new Error('Failed to generate schedule reminder');

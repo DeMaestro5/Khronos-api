@@ -122,13 +122,20 @@ router.get(
         performanceAlerts: true,
         trendUpdates: true,
         systemUpdates: true,
+        securityAlerts: true,
+        productUpdates: true,
+        messages: true,
+        reminders: true,
+        marketing: false,
+        reports: true,
         quietHours: {
+          enabled: false,
           start: '22:00',
           end: '08:00',
         },
         createdAt: new Date(),
         updatedAt: new Date(),
-      };
+      } as any;
 
       settings = await notificationService.updateNotificationSettings(
         userId,
@@ -159,6 +166,12 @@ router.put(
       'performanceAlerts',
       'trendUpdates',
       'systemUpdates',
+      'securityAlerts',
+      'productUpdates',
+      'messages',
+      'reminders',
+      'marketing',
+      'reports',
       'quietHours',
     ];
 
@@ -175,15 +188,18 @@ router.put(
 
     // Validate quietHours format if provided
     if (filteredUpdates.quietHours) {
-      const { start, end } = filteredUpdates.quietHours;
+      const { start, end, enabled } = filteredUpdates.quietHours;
       if (
-        typeof start !== 'string' ||
-        typeof end !== 'string' ||
-        !/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(start) ||
-        !/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(end)
+        (start &&
+          (typeof start !== 'string' ||
+            !/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(start))) ||
+        (end &&
+          (typeof end !== 'string' ||
+            !/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(end))) ||
+        (enabled !== undefined && typeof enabled !== 'boolean')
       ) {
         throw new BadRequestResponse(
-          'Invalid quietHours format. Use HH:MM format (e.g., "22:00")',
+          'Invalid quietHours format. Use HH:MM for start/end and boolean for enabled',
         );
       }
     }

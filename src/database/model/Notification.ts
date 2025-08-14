@@ -8,6 +8,13 @@ export enum NotificationType {
   PERFORMANCE = 'performance',
   TREND = 'trend',
   SYSTEM = 'system',
+  // Additional categories to support UI toggles
+  SECURITY = 'security',
+  REMINDER = 'reminder',
+  MESSAGE = 'message',
+  MARKETING = 'marketing',
+  PRODUCT_UPDATE = 'product_update',
+  REPORT = 'report',
 }
 
 export enum NotificationPriority {

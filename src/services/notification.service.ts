@@ -7,6 +7,7 @@ import Notification, {
   NotificationStatus,
 } from '../database/model/Notification';
 import NotificationSettings from '../database/model/NotificationSettings';
+import { ServiceManager } from './service-manager';
 
 export class NotificationService {
   private llmService: UnifiedLLMService;
@@ -14,6 +15,29 @@ export class NotificationService {
   constructor() {
     // Initialize with Gemini as primary provider (free model)
     this.llmService = new UnifiedLLMService(LLMProvider.GEMINI);
+  }
+
+  private isCategoryEnabled(
+    settings: NotificationSettings | null,
+    type: NotificationType,
+  ): boolean {
+    if (!settings) return true;
+
+    const map: Record<NotificationType, boolean | undefined> = {
+      [NotificationType.SCHEDULE]: settings.scheduleNotifications,
+      [NotificationType.PERFORMANCE]: settings.performanceAlerts,
+      [NotificationType.TREND]: settings.trendUpdates,
+      [NotificationType.SYSTEM]: settings.systemUpdates,
+      [NotificationType.SECURITY]: settings.securityAlerts,
+      [NotificationType.REMINDER]: settings.reminders,
+      [NotificationType.MESSAGE]: settings.messages,
+      [NotificationType.MARKETING]: settings.marketing,
+      [NotificationType.PRODUCT_UPDATE]: settings.productUpdates,
+      [NotificationType.REPORT]: settings.reports,
+    } as any;
+
+    const enabled = map[type];
+    return enabled === undefined ? true : Boolean(enabled);
   }
 
   async createNotification(
@@ -24,6 +48,9 @@ export class NotificationService {
     priority: NotificationPriority = NotificationPriority.MEDIUM,
     data?: Record<string, any>,
   ): Promise<Notification> {
+    const now = new Date();
+    const settings = await this.getNotificationSettings(userId);
+
     const notification: Notification = {
       _id: new Types.ObjectId(),
       userId,
@@ -33,11 +60,59 @@ export class NotificationService {
       priority,
       status: NotificationStatus.UNREAD,
       data,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: now,
+      updatedAt: now,
     };
 
-    return await NotificationRepo.create(notification);
+    const created = await NotificationRepo.create(notification);
+
+    // Determine if we should broadcast to client
+    const shouldBroadcast =
+      this.isCategoryEnabled(settings, type) &&
+      !(
+        settings?.quietHours?.enabled &&
+        this.isInQuietHours(now, settings.quietHours)
+      );
+
+    if (shouldBroadcast) {
+      try {
+        const ws = ServiceManager.getInstance().getWebSocketService();
+        await ws.broadcastToUser(userId, 'notification', created);
+      } catch {}
+    }
+
+    return created;
+  }
+
+  private isInQuietHours(
+    now: Date,
+    quietHours?: { enabled?: boolean; start: string; end: string },
+  ): boolean {
+    if (!quietHours) {
+      return false;
+    }
+
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentTimeInMinutes = currentHour * 60 + currentMinute;
+
+    const [startHour, startMinute] = quietHours.start.split(':').map(Number);
+    const [endHour, endMinute] = quietHours.end.split(':').map(Number);
+
+    const startTimeInMinutes = startHour * 60 + startMinute;
+    const endTimeInMinutes = endHour * 60 + endMinute;
+
+    if (startTimeInMinutes <= endTimeInMinutes) {
+      return (
+        currentTimeInMinutes >= startTimeInMinutes &&
+        currentTimeInMinutes <= endTimeInMinutes
+      );
+    } else {
+      return (
+        currentTimeInMinutes >= startTimeInMinutes ||
+        currentTimeInMinutes <= endTimeInMinutes
+      );
+    }
   }
 
   async generatePerformanceAlert(

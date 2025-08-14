@@ -123,6 +123,13 @@ async function updateSettings(
   return updatedSettings;
 }
 
+async function countUnread(userId: Types.ObjectId): Promise<number> {
+  return NotificationModel.countDocuments({
+    userId,
+    status: NotificationStatus.UNREAD,
+  }).exec();
+}
+
 export default {
   create,
   findById,
@@ -134,4 +141,5 @@ export default {
   createSettings,
   findSettingsByUserId,
   updateSettings,
+  countUnread,
 };

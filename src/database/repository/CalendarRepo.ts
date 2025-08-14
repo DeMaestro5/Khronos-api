@@ -54,6 +54,24 @@ async function findByDateRange(
     .exec();
 }
 
+// New helper: get distinct userIds which have any events overlapping the window
+async function findUserIdsWithEventsInRange(
+  startDate: Date,
+  endDate: Date,
+): Promise<Types.ObjectId[]> {
+  const rawIds = (await CalendarEventModel.distinct('userId', {
+    $or: [
+      { startDate: { $gte: startDate, $lte: endDate } },
+      { endDate: { $gte: startDate, $lte: endDate } },
+      { startDate: { $lte: startDate }, endDate: { $gte: endDate } },
+    ],
+  }).exec()) as Array<string | Types.ObjectId>;
+
+  return rawIds.map((id) =>
+    typeof id === 'string' ? new Types.ObjectId(id) : (id as Types.ObjectId),
+  );
+}
+
 async function findByYear(
   userId: Types.ObjectId,
   year: number,
@@ -353,6 +371,7 @@ export default {
   findById,
   findByUserId,
   findByDateRange,
+  findUserIdsWithEventsInRange,
   findByYear,
   findByMonth,
   findByDay,

@@ -4,12 +4,14 @@ import {
   NotificationPriority,
 } from '../database/model/Notification';
 import CalendarRepo from '../database/repository/CalendarRepo';
-import { Types } from 'mongoose';
+import { ServiceManager } from './service-manager';
 
 export class SchedulerService {
   private notificationService: NotificationService;
   private checkInterval: NodeJS.Timeout | null = null;
-  private readonly CHECK_INTERVAL_MS = 5 * 60 * 1000; // Check every 5 minutes
+  private readonly CHECK_INTERVAL_MS = Number(
+    process.env.SCHEDULER_CHECK_INTERVAL_MS || 5 * 60 * 1000,
+  );
 
   constructor() {
     this.notificationService = new NotificationService();
@@ -35,40 +37,41 @@ export class SchedulerService {
     }
   }
 
+  // Expose manual trigger for testing or admin actions
+  public async runCheckNow(): Promise<void> {
+    await this.checkUpcomingEvents();
+  }
+
   private async checkUpcomingEvents(): Promise<void> {
     const now = new Date();
     const timeWindow = new Date(now.getTime() + 24 * 60 * 60 * 1000); // Next 24 hours
 
-    // Get all users with upcoming events
-    const allEvents = await CalendarRepo.findByDateRange(
-      new Types.ObjectId(), // This will be replaced with actual user IDs
+    // Gather users with events in the upcoming 24h window
+    const userIds = await CalendarRepo.findUserIdsWithEventsInRange(
       now,
       timeWindow,
     );
 
-    // Group events by user
-    const eventsByUser = new Map<string, any[]>();
-    for (const event of allEvents) {
-      const userId = event.userId.toString();
-      if (!eventsByUser.has(userId)) {
-        eventsByUser.set(userId, []);
-      }
-      eventsByUser.get(userId)?.push(event);
-    }
-
-    // Process events for each user
-    for (const [userId, events] of eventsByUser) {
-      const settings = await this.notificationService.getNotificationSettings(
-        new Types.ObjectId(userId),
+    for (const userId of userIds) {
+      const events = await CalendarRepo.findByDateRange(
+        userId,
+        now,
+        timeWindow,
       );
+
+      const settings =
+        await this.notificationService.getNotificationSettings(userId);
 
       // Skip if user has disabled schedule notifications
       if (!settings?.scheduleNotifications) {
         continue;
       }
 
-      // Check if we're in quiet hours
-      if (this.isInQuietHours(now, settings.quietHours)) {
+      // Respect quiet hours only if enabled
+      if (
+        settings.quietHours?.enabled &&
+        this.isInQuietHours(now, settings.quietHours)
+      ) {
         continue;
       }
 
@@ -106,22 +109,23 @@ export class SchedulerService {
       }
     }
 
-    // Check for overdue events
-    const overdueEvents = await CalendarRepo.findOverdue(new Types.ObjectId()); // This will be replaced with actual user IDs
-    for (const event of overdueEvents) {
-      if (event.status === 'completed' || event.status === 'cancelled') {
-        continue;
-      }
+    // Check for overdue events for each user
+    for (const userId of userIds) {
+      const overdueEvents = await CalendarRepo.findOverdue(userId);
+      for (const event of overdueEvents) {
+        if (event.status === 'completed' || event.status === 'cancelled') {
+          continue;
+        }
 
-      const settings = await this.notificationService.getNotificationSettings(
-        event.userId,
-      );
-      if (!settings?.scheduleNotifications) {
-        continue;
-      }
+        const settings = await this.notificationService.getNotificationSettings(
+          event.userId,
+        );
+        if (!settings?.scheduleNotifications) {
+          continue;
+        }
 
-      // Generate follow-up notification for past events
-      await this.generateEventFollowUpNotification(event);
+        await this.generateEventFollowUpNotification(event);
+      }
     }
   }
 
@@ -137,7 +141,7 @@ export class SchedulerService {
       timeValue !== 1 ? 's' : ''
     }.`;
 
-    await this.notificationService.createNotification(
+    const created = await this.notificationService.createNotification(
       event.userId,
       NotificationType.SCHEDULE,
       title,
@@ -151,13 +155,19 @@ export class SchedulerService {
         reminderType: reminder.type,
       },
     );
+
+    // Push to websocket clients in real-time
+    try {
+      const ws = ServiceManager.getInstance().getWebSocketService();
+      await ws.broadcastToUser(event.userId, 'notification', created);
+    } catch {}
   }
 
   private async generateEventFollowUpNotification(event: any): Promise<void> {
     const title = `Event Follow-up: ${event.title}`;
     const message = `${event.title} has ended. Would you like to mark it as completed?`;
 
-    await this.notificationService.createNotification(
+    const created = await this.notificationService.createNotification(
       event.userId,
       NotificationType.SCHEDULE,
       title,
@@ -171,6 +181,11 @@ export class SchedulerService {
         action: 'mark_completed',
       },
     );
+
+    try {
+      const ws = ServiceManager.getInstance().getWebSocketService();
+      await ws.broadcastToUser(event.userId, 'notification', created);
+    } catch {}
   }
 
   private getPriorityForEvent(event: any): NotificationPriority {
@@ -190,7 +205,7 @@ export class SchedulerService {
 
   private isInQuietHours(
     now: Date,
-    quietHours?: { start: string; end: string },
+    quietHours?: { enabled?: boolean; start: string; end: string },
   ): boolean {
     if (!quietHours) {
       return false;

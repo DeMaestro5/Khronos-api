@@ -10,6 +10,11 @@ import { RoleCode } from '../../database/model/Role';
 import User from '../../database/model/User';
 import { Tokens } from '../../types/app-request';
 import JWT from '../../core/JWT';
+import { NotificationService } from '../notification.service';
+import {
+  NotificationPriority,
+  NotificationType,
+} from '../../database/model/Notification';
 
 export interface SignupData {
   name: string;
@@ -32,6 +37,8 @@ export interface AuthResponse {
 }
 
 class AuthService {
+  private notificationService = new NotificationService();
+
   async signup(data: SignupData): Promise<AuthResponse> {
     const user = await UserRepo.findByEmail(data.email);
     if (user) throw new BadRequestError('User already registered');
@@ -62,6 +69,15 @@ class AuthService {
 
     const userData = await getUserData(createdUser);
 
+    // Security notification: new account created
+    await this.notificationService.createNotification(
+      createdUser._id,
+      NotificationType.SECURITY,
+      'New Account Created',
+      'Your account was created successfully.',
+      NotificationPriority.MEDIUM,
+    );
+
     return {
       user: userData,
       tokens,
@@ -88,6 +104,17 @@ class AuthService {
       data.rememberMe,
     );
     const userData = await getUserData(user);
+
+    // Security notification: successful login
+    await this.notificationService.createNotification(
+      user._id,
+      NotificationType.SECURITY,
+      'New Login',
+      `You just signed in${
+        data.rememberMe ? ' with remember me enabled' : ''
+      }.`,
+      NotificationPriority.LOW,
+    );
 
     return {
       user: userData,
@@ -118,6 +145,15 @@ class AuthService {
       password: passwordHash,
     } as User);
     await KeystoreRepo.removeAllForClient({ _id: userId } as User);
+
+    // Security notification: password changed
+    await this.notificationService.createNotification(
+      userId,
+      NotificationType.SECURITY,
+      'Password Changed',
+      'Your password was updated. If this was not you, please contact support immediately.',
+      NotificationPriority.HIGH,
+    );
   }
 }
 

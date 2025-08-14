@@ -141,19 +141,26 @@ export class SchedulerService {
       timeValue !== 1 ? 's' : ''
     }.`;
 
+    const notificationData: any = {
+      eventId: event._id,
+      startDate: event.startDate,
+      endDate: event.endDate,
+      type: event.eventType,
+      reminderType: reminder.type,
+    };
+
+    // Include contentId if the event is associated with content
+    if (event.contentId) {
+      notificationData.contentId = event.contentId;
+    }
+
     const created = await this.notificationService.createNotification(
       event.userId,
       NotificationType.SCHEDULE,
       title,
       message,
       this.getPriorityForEvent(event),
-      {
-        eventId: event._id,
-        startDate: event.startDate,
-        endDate: event.endDate,
-        type: event.eventType,
-        reminderType: reminder.type,
-      },
+      notificationData,
     );
 
     // Push to websocket clients in real-time
@@ -167,19 +174,26 @@ export class SchedulerService {
     const title = `Event Follow-up: ${event.title}`;
     const message = `${event.title} has ended. Would you like to mark it as completed?`;
 
+    const notificationData: any = {
+      eventId: event._id,
+      startDate: event.startDate,
+      endDate: event.endDate,
+      type: event.eventType,
+      action: 'mark_completed',
+    };
+
+    // Include contentId if the event is associated with content
+    if (event.contentId) {
+      notificationData.contentId = event.contentId;
+    }
+
     const created = await this.notificationService.createNotification(
       event.userId,
       NotificationType.SCHEDULE,
       title,
       message,
       NotificationPriority.MEDIUM,
-      {
-        eventId: event._id,
-        startDate: event.startDate,
-        endDate: event.endDate,
-        type: event.eventType,
-        action: 'mark_completed',
-      },
+      notificationData,
     );
 
     try {

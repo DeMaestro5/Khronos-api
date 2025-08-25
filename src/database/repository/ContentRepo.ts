@@ -108,8 +108,27 @@ async function findUserPlatform(
   return ContentModel.find({ userId, platform }).lean().exec();
 }
 
+async function bulkWriteUpdateSet(
+  ops: Array<{ filter: any; update: any }>,
+): Promise<{ modifiedCount: number; upsertedCount: number }> {
+  const bulkOps = ops.map((o) => {
+    return {
+      updateOne: {
+        filter: o.filter,
+        update: { $set: o.update },
+      },
+    };
+  });
+  const content = await ContentModel.bulkWrite(bulkOps, { ordered: false });
+  return {
+    modifiedCount: content.modifiedCount || 0,
+    upsertedCount: content.upsertedCount || 0,
+  };
+}
+
 export default {
   exists,
+  bulkWriteUpdateSet,
   findById,
   findByUserId,
   findByType,

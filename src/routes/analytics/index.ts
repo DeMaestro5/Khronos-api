@@ -15,9 +15,13 @@ import { AnalyticsOrchestratorService } from '../../services/analytics-orchestra
 import { AnalyticsService } from '../../services/analytics.service';
 import ContentRepo from '../../database/repository/ContentRepo';
 
+import syncRouter from './sync';
+
 const router = Router();
 const analyticsOrchestrator = new AnalyticsOrchestratorService();
 const analyticsService = new AnalyticsService(); // Keep for backward compatibility with specific methods
+
+router.use('/sync', syncRouter);
 
 router.use(authentication);
 
@@ -1532,6 +1536,7 @@ router.post(
   '/update-platform-ids',
   asyncHandler(async (req: ProtectedRequest, res: Response) => {
     const userId = req.user._id;
+    console.log(userId);
     const { contentId, platformPostIds } = req.body;
 
     try {
@@ -1540,18 +1545,15 @@ router.post(
         throw new BadRequestError('contentId and platformPostIds are required');
       }
 
-      // Import ContentRepo
-      const ContentRepo = (
-        await import('../../database/repository/ContentRepo')
-      ).default;
-
       // Find the content and verify ownership
       const content = await ContentRepo.findById(contentId);
+      console.log('content', content?.userId);
+
       if (!content) {
         throw new NotFoundError('Content not found');
       }
 
-      if (content.userId.toString() !== userId.toString()) {
+      if (content.userId._id?.toString() !== userId.toString()) {
         throw new ForbiddenError('You can only update your own content');
       }
 

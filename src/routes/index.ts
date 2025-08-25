@@ -1,10 +1,13 @@
 import express from 'express';
 import apikey from '../auth/apikey';
 import permission from '../helpers/permission';
+
 import { Permission } from '../database/model/ApiKey';
 import signup from './access/signup';
+
 import login from './access/login';
 import logout from './access/logout';
+
 import token from './access/token';
 import credential from './access/credential';
 import googleAuth from './access/google-auth';
@@ -15,11 +18,14 @@ import content from './content';
 import llm from './llm';
 import calendar from './calendar';
 import chat from './chat';
+
 import analytics from './analytics';
+
 import notifications from './notifications';
 import trend from './trend';
 import settings from './settings';
 import cache from './cache';
+import platforms from './platforms';
 
 const router = express.Router();
 
@@ -47,5 +53,6 @@ router.use('/notifications', notifications);
 router.use('/trends', trend);
 router.use('/settings', settings);
 router.use('/cache', cache);
+router.use('/platforms', platforms);
 
 export default router;

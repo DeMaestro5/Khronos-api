@@ -10,7 +10,26 @@ router.use(authentication);
 
 router.post('/user', async (req: ProtectedRequest, res) => {
   const service = new AnalyticsSyncService();
-  const result = await service.syncUser(req.user._id);
+
+  const {
+    includePlatforms,
+    concurrency,
+    maxRetries,
+    retryDelayBaseMs,
+    retryJittersMaxMs,
+    remoteBatchSize,
+    bulkWriteChunkSize,
+  } = req.body || {};
+
+  const result = await service.syncUser(req.user._id, {
+    includePlatforms,
+    concurrency,
+    maxRetries,
+    retryDelayBaseMs,
+    retryJittersMaxMs,
+    remoteBatchSize,
+    bulkWriteChunkSize,
+  });
   new SuccessResponse('analytics_sync_user_complete', result).send(res);
 });
 

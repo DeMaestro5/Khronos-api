@@ -4,7 +4,14 @@ import ContentRepo from '../database/repository/ContentRepo';
 import RateLimiter from './rate-limiter';
 import Logger from '../core/Logger';
 import axios from 'axios';
-type SyncPlatform = 'youtube';
+
+type SyncPlatform =
+  | 'youtube'
+  | 'facebook'
+  | 'instagram'
+  | 'tiktok'
+  | 'linkedin'
+  | 'twitter';
 
 interface SyncOptions {
   concurrency: number;
@@ -54,19 +61,35 @@ const DEFAULT_OPTIONS: SyncOptions = {
   bulkWriteChunkSize: 100,
   retryJittersMaxMs: 100,
   remoteBatchSize: 50,
-  includePlatforms: ['youtube'],
+  includePlatforms: [
+    'youtube',
+    'facebook',
+    'instagram',
+    'tiktok',
+    'linkedin',
+    'twitter',
+  ],
 };
 
+// prevent multiple syncs for the same user from running at the same time
 const syncingUserIds = new Set<string>();
 
+// rate limiters for each platform
 const globalMetricsLimiters: Record<SyncPlatform, RateLimiter> = {
   youtube: new RateLimiter(8),
+  facebook: new RateLimiter(6),
+  instagram: new RateLimiter(6),
+  tiktok: new RateLimiter(4),
+  linkedin: new RateLimiter(8),
+  twitter: new RateLimiter(8),
 };
 
+// sleep for a given number of milliseconds
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// retry a function with a given number of retries, base delay, and jitter
 async function withRetry<T>(
   fn: () => Promise<T>,
   maxRetries: number,
@@ -88,6 +111,7 @@ async function withRetry<T>(
   }
 }
 
+// chunk an array into smaller arrays of a given size
 function chunk<T>(array: T[], size: number): T[][] {
   if (size <= 0) return [array];
   const output: T[][] = [];
@@ -97,6 +121,7 @@ function chunk<T>(array: T[], size: number): T[][] {
   return output;
 }
 
+// coerce metrics to a valid MetricsPayload
 function coerceMetrics(m?: Partial<MetricsPayload>): MetricsPayload {
   const likes = Math.max(0, Number(m?.likes || 0));
   const comments = Math.max(0, Number(m?.comments || 0));
@@ -122,6 +147,7 @@ function coerceMetrics(m?: Partial<MetricsPayload>): MetricsPayload {
   };
 }
 
+// run a function with a given number of items in parallel
 async function runWithConcurrency<I>(
   items: I[],
   limit: number,
@@ -150,6 +176,7 @@ async function runWithConcurrency<I>(
   });
 }
 
+// analytics sync service
 export class AnalyticsSyncService {
   private social: UserSocialService;
 
@@ -157,6 +184,89 @@ export class AnalyticsSyncService {
     this.social = new UserSocialService();
   }
 
+  // process platform work
+  private async processPlatformWork(
+    workItems: WorkItem[],
+    platform: SyncPlatform,
+    userId: Types.ObjectId,
+    options: SyncOptions,
+    resultMap: Map<string, MetricsPayload>,
+    failures: SyncResult['failures'],
+  ): Promise<void> {
+    if (workItems.length === 0) return;
+
+    await runWithConcurrency(workItems, options.concurrency, async (w) => {
+      const began = Date.now();
+      try {
+        const metrics = await withRetry(
+          () =>
+            globalMetricsLimiters[platform].add(async () => {
+              switch (platform) {
+                case 'youtube':
+                  return this.social.getYoutubeMetricsForUser(userId, w.postId);
+                case 'facebook':
+                  return this.social.getFacebookMetricsForUser(
+                    userId,
+                    w.postId,
+                  );
+                case 'instagram':
+                  return this.social.getInstagramMetricsForUser(
+                    userId,
+                    w.postId,
+                  );
+                case 'tiktok':
+                  return this.social.getTikTokMetricsForUser(userId, w.postId);
+                case 'linkedin':
+                  return this.social.getLinkedInMetricsForUser(
+                    userId,
+                    w.postId,
+                  );
+                case 'twitter':
+                  return this.social.getTwitterMetricsForUser(userId, w.postId);
+                default:
+                  throw new Error(`unknown_platform: ${platform}`);
+              }
+            }),
+          options.maxRetries,
+          options.retryDelayBaseMs,
+          options.retryJittersMaxMs,
+        );
+
+        const coerced = coerceMetrics({
+          likes: metrics?.metrics?.likes,
+          comments: metrics?.metrics?.comments,
+          shares: metrics?.metrics?.shares,
+          views: metrics?.metrics?.views,
+          reach: metrics?.metrics?.reach,
+          impressions: metrics?.metrics?.impressions,
+          engagement: metrics?.metrics?.engagement,
+        });
+
+        resultMap.set(`${platform}:${w.postId}`, coerced);
+        Logger.debug(
+          `sync_platform_success platform=${platform} contentId=${
+            w.contentId
+          } postId=${w.postId} durationMs=${Date.now() - began}`,
+        );
+      } catch (error: any) {
+        Logger.warn(
+          `sync_platform_fail platform=${platform} contentId=${
+            w.contentId
+          } postId=${w.postId} durationMs=${Date.now() - began} error=${
+            error?.message || error
+          }`,
+        );
+        failures.push({
+          index: w.index,
+          contentId: w.contentId.toString(),
+          platform: platform,
+          reason: error?.message || error,
+        });
+      }
+    });
+  }
+
+  // sync a user
   async syncUser(
     userId: Types.ObjectId,
     opts?: Partial<SyncOptions>,
@@ -215,59 +325,111 @@ export class AnalyticsSyncService {
         };
       }
 
+      const resultMap = new Map<string, MetricsPayload>();
       const ytWork = work.filter((w) => w.platform === 'youtube');
+      const fbWork = work.filter((w) => w.platform === 'facebook');
+      const igWork = work.filter((w) => w.platform === 'instagram');
+      const ttWork = work.filter((w) => w.platform === 'tiktok');
+      const liWork = work.filter((w) => w.platform === 'linkedin');
+      const twWork = work.filter((w) => w.platform === 'twitter');
 
       const ytResultMap = await this.fetchYoutubeBatches(ytWork, options);
+      for (const [k, v] of ytResultMap.entries())
+        resultMap.set(`youtube:${k}`, v);
 
-      const missingYt = ytWork.filter((w) => !ytResultMap.has(w.postId));
-      if (missingYt.length > 0) {
-        Logger.info(
-          `Processing ${missingYt.length} missing YouTube items individually`,
+      const failures: SyncResult['failures'] = [];
+
+      if (options.includePlatforms.includes('youtube') && ytWork.length > 0) {
+        await this.processPlatformWork(
+          ytWork,
+          'youtube',
+          userId,
+          options,
+          resultMap,
+          failures,
         );
       }
-      await runWithConcurrency(missingYt, options.concurrency, async (w) => {
-        const begin = Date.now();
-        try {
-          const metrics = await withRetry(
-            () =>
-              globalMetricsLimiters.youtube.add(() =>
-                this.social.getYoutubeMetricsForUser(userId, w.postId),
-              ),
-            options.maxRetries,
-            options.retryDelayBaseMs,
-            options.retryJittersMaxMs,
-          );
 
-          const coerced = coerceMetrics({
-            likes: metrics?.metrics?.likes,
-            comments: metrics?.metrics?.comments,
-            shares: metrics?.metrics?.shares,
-            views: metrics?.metrics?.views,
-            reach: metrics?.metrics?.reach,
-            impressions: metrics?.metrics?.impressions,
-            engagement: metrics?.metrics?.engagement,
-          });
+      if (options.includePlatforms.includes('facebook') && fbWork.length > 0) {
+        await this.processPlatformWork(
+          fbWork,
+          'facebook',
+          userId,
+          options,
+          resultMap,
+          failures,
+        );
+      }
 
-          ytResultMap.set(w.postId, coerced);
-          Logger.debug(
-            `fallback_youtube_success content=${w.contentId} postId=${
-              w.postId
-            } durationMs=${Date.now() - begin}`,
-          );
-        } catch (error: any) {
-          Logger.warn(
-            `fallback_youtube_fail content=${w.contentId} postId=${
-              w.postId
-            } durationMs=${Date.now() - begin} error=${
-              error?.message || error
-            }`,
-          );
-          // don’t rethrow; runWithConcurrency keeps going automatically
-        }
-      });
-      const ops = ytWork
+      if (options.includePlatforms.includes('instagram') && igWork.length > 0) {
+        await this.processPlatformWork(
+          igWork,
+          'instagram',
+          userId,
+          options,
+          resultMap,
+          failures,
+        );
+      }
+
+      if (options.includePlatforms.includes('tiktok') && ttWork.length > 0) {
+        await this.processPlatformWork(
+          ttWork,
+          'tiktok',
+          userId,
+          options,
+          resultMap,
+          failures,
+        );
+      }
+
+      if (options.includePlatforms.includes('linkedin') && liWork.length > 0) {
+        await this.processPlatformWork(
+          liWork,
+          'linkedin',
+          userId,
+          options,
+          resultMap,
+          failures,
+        );
+      }
+
+      if (options.includePlatforms.includes('twitter') && twWork.length > 0) {
+        await this.processPlatformWork(
+          twWork,
+          'twitter',
+          userId,
+          options,
+          resultMap,
+          failures,
+        );
+      }
+
+      const allWork = [
+        ...(options.includePlatforms.includes('youtube') ? ytWork : []),
+        ...(options.includePlatforms.includes('facebook') ? fbWork : []),
+        ...(options.includePlatforms.includes('instagram') ? igWork : []),
+        ...(options.includePlatforms.includes('tiktok') ? ttWork : []),
+        ...(options.includePlatforms.includes('linkedin') ? liWork : []),
+        ...(options.includePlatforms.includes('twitter') ? twWork : []),
+      ];
+
+      const missing = allWork.filter(
+        (w) => !resultMap.has(`${w.platform}:${w.postId}`),
+      );
+      for (const miss of missing) {
+        failures.push({
+          index: miss.index,
+          contentId: miss.contentId.toString(),
+          platform: miss.platform,
+          reason: 'metrics_not_available',
+        });
+      }
+
+      const ops = allWork
         .map((w) => {
-          const m = ytResultMap.get(w.postId);
+          const key = `${w.platform}:${w.postId}`;
+          const m = resultMap.get(key);
           if (!m) return null;
           return {
             filter: { _id: w.contentId },
@@ -305,7 +467,7 @@ export class AnalyticsSyncService {
         }
       }
 
-      const attempted = ytWork.length;
+      const attempted = allWork.length;
       const missingPostIds = ytWork.filter((w) => !ytResultMap.has(w.postId));
       for (const miss of missingPostIds) {
         failure.push({
@@ -324,7 +486,7 @@ export class AnalyticsSyncService {
         attempted,
         succeeded,
         failed: failure.length,
-        failures: failure,
+        failures,
         durationMs,
       };
     } finally {
@@ -332,6 +494,7 @@ export class AnalyticsSyncService {
     }
   }
 
+  // fetch youtube batches
   private async fetchYoutubeBatches(
     items: WorkItem[],
     options: SyncOptions,

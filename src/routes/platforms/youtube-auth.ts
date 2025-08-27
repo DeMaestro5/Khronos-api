@@ -3,7 +3,10 @@ import passport from 'passport';
 import asyncHandler from '../../helpers/asyncHandler';
 import { ProtectedRequest } from '../../types/app-request';
 import { Types } from 'mongoose';
-import PlatformConnectionRepo from '../../database/repository/PlatformConnectionRepo';
+import {
+  upsertConnection,
+  deactivate,
+} from '../../database/repository/PlatformConnectionRepo';
 import { SuccessResponse } from '../../core/ApiResponse';
 
 const router = express.Router();
@@ -41,7 +44,7 @@ router.get(
     const userId = new Types.ObjectId(
       (req.user as any)?.id || req.query.userId,
     );
-    await PlatformConnectionRepo.upsertConnection(userId, 'youtube', {
+    await upsertConnection(userId, 'youtube', {
       accessToken,
       refreshToken,
       tokenExpiresAt: expiresIn
@@ -66,7 +69,7 @@ router.get(
 router.delete(
   '/disconnect',
   asyncHandler(async (req: ProtectedRequest, res) => {
-    await PlatformConnectionRepo.deactivate(req.user as any, 'youtube');
+    await deactivate(req.user as any, 'youtube');
     new SuccessResponse('Youtube disconnected successfully', {
       platform: 'youtube',
     }).send(res);

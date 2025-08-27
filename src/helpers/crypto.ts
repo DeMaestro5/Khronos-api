@@ -37,3 +37,8 @@ export function decrypt(payload: string): string {
   const decrypted = Buffer.concat([decipher.update(data), decipher.final()]);
   return decrypted.toString('utf8');
 }
+
+export function decryptIfPresent(cipherText?: string): string | undefined {
+  if (!cipherText) return undefined;
+  return decrypt(cipherText);
+}

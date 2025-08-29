@@ -9,6 +9,7 @@ import {
   getInstagramConnectionByUser,
   getLinkedinConnectionByUser,
   getTiktokConnectionByUser,
+  getTwitterConnectionByUser,
 } from '../database/repository/PlatformConnectionRepo';
 import { decryptIfPresent } from '../helpers/crypto';
 import axios from 'axios';
@@ -255,7 +256,7 @@ export class UserSocialService {
   }
 
   async getTwitterMetricsForUser(userId: Types.ObjectId, tweetId: string) {
-    const conn = await getTiktokConnectionByUser(userId);
+    const conn = await getTwitterConnectionByUser(userId);
     const token = decryptIfPresent(
       conn?.platformCredentials?.twitter?.accessTokenEnc,
     );

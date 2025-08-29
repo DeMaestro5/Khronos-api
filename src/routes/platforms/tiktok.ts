@@ -10,6 +10,8 @@ import {
 } from '../../database/repository/PlatformConnectionRepo';
 import { SuccessResponse } from '../../core/ApiResponse';
 import { NotFoundError } from '../../core/ApiError';
+import { PlatformConnectionModel } from '../../database/model/platformConnection';
+import { encrypt } from '../../helpers/crypto';
 
 const router = Router();
 
@@ -24,6 +26,17 @@ router.post(
       accountName: accountName || 'TikTok Account',
       permissions: ['read', 'analytics'],
     });
+
+    await PlatformConnectionModel.updateOne(
+      { userId: req.user._id, platform: 'tiktok' },
+      {
+        $set: {
+          'platformCredentials.tiktok.openId': openId,
+          'platformCredentials.tiktok.accessTokenEnc': encrypt(accessToken),
+        },
+      },
+      { upsert: false },
+    );
 
     new SuccessResponse('TikTok connection created successfully', {
       platform: 'tiktok',

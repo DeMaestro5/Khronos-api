@@ -10,6 +10,8 @@ import {
 } from '../../database/repository/PlatformConnectionRepo';
 import { SuccessResponse } from '../../core/ApiResponse';
 import { NotFoundError } from '../../core/ApiError';
+import { PlatformConnectionModel } from '../../database/model/platformConnection';
+import { encrypt } from '../../helpers/crypto';
 
 const router = Router();
 
@@ -25,6 +27,19 @@ router.post(
       accountName: 'Twitter Account',
       permissions: ['read', 'analytics'],
     });
+    await PlatformConnectionModel.updateOne(
+      { userId: req.user._id, platform: 'twitter' },
+      {
+        $set: {
+          'platformCredentials.twitter.userId': userId,
+          'platformCredentials.twitter.screenName': connection.accountName,
+          'platformCredentials.twitter.accessTokenEnc': encrypt(accessToken),
+          'platformCredentials.twitter.accessSecretEnc':
+            encrypt(accessTokenSecret),
+        },
+      },
+      { upsert: false },
+    );
 
     new SuccessResponse('Twitter connection created successfully', {
       platform: 'twitter',

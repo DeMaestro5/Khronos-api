@@ -9,6 +9,8 @@ import {
   upsertConnection,
 } from '../../database/repository/PlatformConnectionRepo';
 import { BadRequestResponse, SuccessResponse } from '../../core/ApiResponse';
+import { encrypt } from '../../helpers/crypto';
+import { PlatformConnectionModel } from '../../database/model/platformConnection';
 
 const router = Router();
 
@@ -24,6 +26,20 @@ router.post(
       accountName: accountName || 'Instagram Business Account',
       permissions: ['read', 'analytics'],
     });
+
+    // After upsertConnection(...) in the connect handler:
+    await PlatformConnectionModel.updateOne(
+      { userId: req.user._id, platform: 'instagram' },
+      {
+        $set: {
+          'platformCredentials.instagram.igBusinessAccountId':
+            igBusinessAccountId,
+          'platformCredentials.instagram.igUserAccessTokenEnc':
+            encrypt(igUserAccessToken),
+        },
+      },
+      { upsert: false },
+    );
 
     new SuccessResponse('Instagram connection successful', {
       platform: 'instagram',

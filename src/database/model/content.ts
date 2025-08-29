@@ -30,6 +30,7 @@ export interface ContentStats {
   shares: number;
   saves?: number;
   clicks?: number;
+  likes?: number;
 }
 
 export interface AIContentSuggestions {
@@ -294,6 +295,10 @@ const schema = new Schema<Content>(
         default: 0,
       },
       clicks: {
+        type: Schema.Types.Number,
+        default: 0,
+      },
+      likes: {
         type: Schema.Types.Number,
         default: 0,
       },

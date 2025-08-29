@@ -24,6 +24,31 @@ router.use(authentication);
 
 router.use('/ai-suggest', aiSuggestRouter);
 
+// Normalize stats from engagement when stats are empty/zero
+function normalizeStatsForResponse(content: any) {
+  const e = content?.engagement || {};
+  const s = content?.stats || {};
+  const hasEngagement = e.likes || e.comments || e.shares || e.views;
+  const statsZero =
+    !s ||
+    ((s.views || 0) === 0 &&
+      (s.engagement || 0) === 0 &&
+      (s.shares || 0) === 0 &&
+      (s.saves || 0) === 0 &&
+      (s.clicks || 0) === 0);
+  if (hasEngagement && statsZero) {
+    const derived = {
+      views: e.views || 0,
+      engagement: (e.likes || 0) + (e.comments || 0) + (e.shares || 0),
+      shares: e.shares || 0,
+      saves: s.saves || 0,
+      clicks: s.clicks || 0,
+    };
+    return { ...content, stats: derived };
+  }
+  return content;
+}
+
 router.post(
   '/',
   validator(schema.create),
@@ -269,9 +294,10 @@ router.get(
     // 🚀 **CACHING LAYER**: Check cache first for user's content
     const cachedContent = await UserCache.getUserContent(req.user._id);
     if (cachedContent) {
+      const normalized = cachedContent.map((c) => normalizeStatsForResponse(c));
       new SuccessResponse('Contents retrieved successfully (cached)', {
-        total: cachedContent.length,
-        contents: cachedContent,
+        total: normalized.length,
+        contents: normalized,
         cached: true,
       }).send(res);
       return;
@@ -279,14 +305,15 @@ router.get(
 
     // Cache miss - fetch from database
     const contents = await ContentRepo.findByUserId(req.user._id);
-    const total = contents.length;
+    const normalized = contents.map((c) => normalizeStatsForResponse(c));
+    const total = normalized.length;
 
     // 🔄 **CACHE STORAGE**: Store result
-    await UserCache.setUserContent(req.user._id, contents);
+    await UserCache.setUserContent(req.user._id, normalized as any);
 
     new SuccessResponse('Contents retrieved successfully', {
       total,
-      contents,
+      contents: normalized,
       cached: false,
     }).send(res);
   }),
@@ -307,13 +334,18 @@ router.get(
     const content = await ContentRepo.findById(
       new Types.ObjectId(req.params.id),
     );
+
     if (!content) throw new NotFoundError('Content not found');
 
     // Get engagement metrics
-    const engagement = await contentService.analyzeEngagement(content._id);
-    content.engagement = engagement;
+    const recompute = req.query.recompute === 'true';
+    if (recompute) {
+      const analysis = await contentService.analyzeEngagement(content._id);
+      (content as any).analysis = analysis;
+    }
 
-    new SuccessResponse('Content retrieved successfully', content).send(res);
+    const normalized = normalizeStatsForResponse(content);
+    new SuccessResponse('Content retrieved successfully', normalized).send(res);
   }),
 );
 
@@ -325,9 +357,10 @@ router.get(
     // 🚀 **CACHING LAYER**: Check cache first for user's content
     const cachedContent = await UserCache.getUserContent(userId);
     if (cachedContent) {
+      const normalized = cachedContent.map((c) => normalizeStatsForResponse(c));
       new SuccessResponse('Contents retrieved successfully (cached)', {
-        totalContents: cachedContent.length,
-        contents: cachedContent,
+        totalContents: normalized.length,
+        contents: normalized,
         cached: true,
       }).send(res);
       return;
@@ -335,14 +368,15 @@ router.get(
 
     // Cache miss - fetch from database
     const contents = await ContentRepo.findByUserId(userId);
-    const totalContents = contents.length;
+    const normalized = contents.map((c) => normalizeStatsForResponse(c));
+    const totalContents = normalized.length;
 
     // 🔄 **CACHE STORAGE**: Store result
-    await UserCache.setUserContent(userId, contents);
+    await UserCache.setUserContent(userId, normalized as any);
 
     new SuccessResponse('Contents retrieved successfully', {
       totalContents,
-      contents,
+      contents: normalized,
       cached: false,
     }).send(res);
   }),

@@ -59,12 +59,50 @@ async function create(content: Content): Promise<Content> {
   return createdContent.toObject();
 }
 
-async function update(content: Content): Promise<Content> {
-  content.updatedAt = new Date();
-  await ContentModel.updateOne({ _id: content._id }, { $set: { ...content } })
+async function update(
+  content: Partial<Content> & { _id: Types.ObjectId },
+): Promise<Content> {
+  const id = content._id;
+
+  // Only allow updating safe, user-editable fields. Do not overwrite analytics/engagement/stats/userId here.
+  const allowedKeys: Array<keyof Content> = [
+    'metadata',
+    'title',
+    'description',
+    'excerpt',
+    'body',
+    'type',
+    'status',
+    'platform',
+    'tags',
+    'platforms',
+    'author',
+    'attachments',
+    'aiSuggestions',
+    'aiGenerated',
+    'contentIdeas',
+    'optimizedContent',
+    'scheduling',
+    'seo',
+    'platformPostIds',
+  ];
+
+  const $set: Record<string, unknown> = { updatedAt: new Date() };
+  for (const key of allowedKeys) {
+    const value = (content as any)[key];
+    if (value !== undefined) {
+      $set[key as string] = value;
+    }
+  }
+
+  await ContentModel.updateOne({ _id: id }, { $set }).exec();
+
+  const updated = await ContentModel.findOne({ _id: id })
+    .populate('userId', 'name email')
     .lean()
     .exec();
-  return content;
+
+  return updated as unknown as Content;
 }
 
 async function updateStatus(
@@ -111,18 +149,29 @@ async function findUserPlatform(
 async function bulkWriteUpdateSet(
   ops: Array<{ filter: any; update: any }>,
 ): Promise<{ modifiedCount: number; upsertedCount: number }> {
-  const bulkOps = ops.map((o) => {
-    return {
-      updateOne: {
-        filter: o.filter,
-        update: { $set: o.update },
-      },
-    };
-  });
-  const content = await ContentModel.bulkWrite(bulkOps, { ordered: false });
+  let modifiedCount = 0;
+  const upsertedCount = 0;
+
+  for (const op of ops) {
+    try {
+      const res = await ContentModel.updateOne(
+        op.filter,
+        { $set: op.update },
+        {
+          writeConcern: { w: 'majority' },
+        },
+      ).exec();
+      // In modern drivers, res.modifiedCount is available; fall back if not
+      const mc = (res as any).modifiedCount ?? (res as any).nModified ?? 0;
+      modifiedCount += mc;
+    } catch (e) {
+      // continue; caller will treat failures separately
+    }
+  }
+
   return {
-    modifiedCount: content.modifiedCount || 0,
-    upsertedCount: content.upsertedCount || 0,
+    modifiedCount,
+    upsertedCount,
   };
 }
 

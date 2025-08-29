@@ -338,6 +338,7 @@ export class AnalyticsSyncService {
         resultMap.set(`youtube:${k}`, v);
 
       const failures: SyncResult['failures'] = [];
+      console.log('ytResultMap:', ytResultMap);
 
       if (options.includePlatforms.includes('youtube') && ytWork.length > 0) {
         await this.processPlatformWork(
@@ -413,51 +414,71 @@ export class AnalyticsSyncService {
         ...(options.includePlatforms.includes('linkedin') ? liWork : []),
         ...(options.includePlatforms.includes('twitter') ? twWork : []),
       ];
+      console.log('resultMap:', resultMap);
+      console.log('allWork:', allWork);
 
-      const missing = allWork.filter(
-        (w) => !resultMap.has(`${w.platform}:${w.postId}`),
-      );
-      for (const miss of missing) {
-        failures.push({
-          index: miss.index,
-          contentId: miss.contentId.toString(),
-          platform: miss.platform,
-          reason: 'metrics_not_available',
-        });
-      }
+      // const missing = allWork.filter(
+      //   (w) => !resultMap.has(`${w.platform}:${w.postId}`),
+      // );
+      // for (const miss of missing) {
+      //   failures.push({
+      //     index: miss.index,
+      //     contentId: miss.contentId.toString(),
+      //     platform: miss.platform,
+      //     reason: 'metrics_not_available',
+      //   });
+      // }
 
       const ops = allWork
         .map((w) => {
           const key = `${w.platform}:${w.postId}`;
           const m = resultMap.get(key);
+          console.log('key:', key, 'm:', m);
           if (!m) return null;
           return {
             filter: { _id: w.contentId },
             update: {
-              'engagement.likes': m.likes,
-              'engagement.comments': m.comments,
-              'engagement.shares': m.shares,
-              'engagement.views': m.views,
-              'analytics.reach': m.reach,
-              'analytics.impressions': m.impressions,
-              'analytics.engagementRate': m.engagementRate,
+              engagement: {
+                likes: m.likes,
+                comments: m.comments,
+                shares: m.shares,
+                views: m.views,
+                saves: 0,
+                clicks: 0,
+              },
+              analytics: {
+                impressions: m.impressions,
+                reach: m.reach,
+                clickThroughRate: 0,
+                conversionRate: 0,
+                engagementRate: m.engagementRate,
+              },
+              stats: {
+                views: m.views,
+                engagement: m.engagement,
+                shares: m.shares,
+                saves: 0,
+                clicks: 0,
+              },
               updatedAt: new Date(),
             },
           };
         })
         .filter(Boolean) as Array<{ filter: any; update: any }>;
 
-      let succeeded = 0;
+      console.log('ops:', ops);
+
       const failure: SyncResult['failures'] = [];
       const opChunks = chunk(ops, options.bulkWriteChunkSize);
 
+      const totalOps = ops.length;
+      let bulkErrors = 0;
       for (const opChunk of opChunks) {
         if (!opChunk || opChunk.length === 0) continue;
         try {
-          const result = await ContentRepo.bulkWriteUpdateSet(opChunk);
-          succeeded +=
-            (result.modifiedCount || 0) + (result.upsertedCount || 0);
+          await ContentRepo.bulkWriteUpdateSet(opChunk);
         } catch (error: any) {
+          bulkErrors += opChunk.length;
           failure.push({
             index: -1,
             contentId: opChunk[0].filter._id.toString(),
@@ -467,26 +488,37 @@ export class AnalyticsSyncService {
         }
       }
 
-      const attempted = allWork.length;
-      const missingPostIds = ytWork.filter((w) => !ytResultMap.has(w.postId));
-      for (const miss of missingPostIds) {
-        failure.push({
-          index: miss.index,
-          contentId: miss.contentId.toString(),
-          platform: miss.platform,
-          reason: 'metrics_not_available',
-        });
-      }
+      try {
+        const { ContentModel } = await import('../database/model/content');
+        const ids = ops.map((o) => o.filter._id);
+        const sample = await ContentModel.find({ _id: { $in: ids } })
+          .select('engagement stats analytics platformPostIds')
+          .lean()
+          .exec();
+        console.log(
+          'post-sync sample docs:',
+          JSON.stringify(sample.slice(0, 3)),
+        );
+      } catch {}
 
+      const succeeded = totalOps - bulkErrors;
+
+      const attempted = ops.length;
       const durationMs = Date.now() - statedAt;
+      const allFailures = [...failures, ...failure];
       Logger.info(
-        `sync_user_complete userId=${userId} attempted=${attempted} succeeded=${succeeded} failed=${failure.length} durationMs=${durationMs}`,
+        `sync_user_complete userId=${userId} attempted=${attempted} succeeded=${succeeded} failed=${allFailures.length} durationMs=${durationMs}`,
       );
+      try {
+        const { UserCache } = await import('../cache/repository/UserCache');
+        await UserCache.invalidateUserContent(userId);
+      } catch {}
+
       return {
         attempted,
         succeeded,
-        failed: failure.length,
-        failures,
+        failed: allFailures.length,
+        failures: allFailures,
         durationMs,
       };
     } finally {

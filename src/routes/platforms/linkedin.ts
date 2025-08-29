@@ -9,6 +9,8 @@ import {
 } from '../../database/repository/PlatformConnectionRepo';
 import validator from '../../helpers/validator';
 import schema from './schema';
+import { PlatformConnectionModel } from '../../database/model/platformConnection';
+import { encrypt } from '../../helpers/crypto';
 
 const router = Router();
 
@@ -25,6 +27,18 @@ router.post(
       accountName: accountName || 'LinkedIn Account',
       permissions: ['read', 'analytics'],
     });
+
+    // After upsertConnection(...) in the connect handler:
+    await PlatformConnectionModel.updateOne(
+      { userId: req.user._id, platform: 'linkedin' },
+      {
+        $set: {
+          'platformCredentials.linkedin.memberUrn': memberUrn,
+          'platformCredentials.linkedin.accessTokenEnc': encrypt(accessToken),
+        },
+      },
+      { upsert: false },
+    );
 
     new SuccessResponse('LinkedIn account connected successfully', {
       platform: 'linkedin',

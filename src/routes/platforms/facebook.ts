@@ -10,6 +10,8 @@ import {
 } from '../../database/repository/PlatformConnectionRepo';
 import { SuccessResponse } from '../../core/ApiResponse';
 import { NotFoundError } from '../../core/ApiError';
+import { encrypt } from '../../helpers/crypto';
+import { PlatformConnectionModel } from '../../database/model/platformConnection';
 
 const router = Router();
 
@@ -25,6 +27,19 @@ router.post(
       accountName: accountName || 'Facebook Page',
       permissions: ['read', 'analytics'],
     });
+
+    // After upsertConnection(...) in the connect handler:
+    await PlatformConnectionModel.updateOne(
+      { userId: req.user._id, platform: 'facebook' },
+      {
+        $set: {
+          'platformCredentials.facebook.pageId': pageId,
+          'platformCredentials.facebook.pageAccessTokenEnc':
+            encrypt(pageAccessToken),
+        },
+      },
+      { upsert: false },
+    );
 
     new SuccessResponse('Facebook connection created successfully', {
       platform: 'facebook',

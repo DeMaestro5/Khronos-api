@@ -2,7 +2,7 @@ import express from 'express';
 import passport from 'passport';
 import asyncHandler from '../../helpers/asyncHandler';
 import { ProtectedRequest } from '../../types/app-request';
-import { Types } from 'mongoose';
+
 import {
   upsertConnection,
   deactivate,
@@ -27,24 +27,22 @@ router.get(
 
 router.get(
   '/callback',
-  passport.authenticate('google', {
-    session: false,
-  }),
+  passport.authenticate('google', { session: false }),
   asyncHandler(async (req: ProtectedRequest, res) => {
     const { accessToken, refreshToken, channelId, channelTitle, expiresIn } =
       req.query as any;
-    if (!accessToken) {
+
+    // Guard: we must have an app user from requireUser middleware
+    if (!req.user) {
       return res.redirect(
         `${
           process.env.FRONTEND_URL || 'http://localhost:3000'
-        }/integrations?error=missing_tokens'}`,
+        }/integrations?platform=youtube&success=0&reason=no_app_user`,
       );
     }
 
-    const userId = new Types.ObjectId(
-      (req.user as any)?.id || req.query.userId,
-    );
-    await upsertConnection(userId, 'youtube', {
+    // Persist connection to the current app user (NOT logging in as Google user)
+    await upsertConnection((req.user as any).id, 'youtube', {
       accessToken,
       refreshToken,
       tokenExpiresAt: expiresIn
@@ -58,11 +56,12 @@ router.get(
       },
     });
 
-    new SuccessResponse('Youtube connected successfully', {
-      platform: 'youtube',
-      channel: { channelId, channelTitle },
-      connected: true,
-    }).send(res);
+    // Redirect back to the frontend with success flag
+    return res.redirect(
+      `${
+        process.env.FRONTEND_URL || 'http://localhost:3000'
+      }/integrations?platform=youtube&success=1`,
+    );
   }),
 );
 

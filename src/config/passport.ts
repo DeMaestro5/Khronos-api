@@ -14,7 +14,11 @@ passport.use(
     async (accessToken, refreshToken, profile, done) => {
       try {
         // Pass the profile to the callback route
-        return done(null, profile);
+        return done(null, {
+          accessToken,
+          refreshToken,
+          profile,
+        });
       } catch (error) {
         return done(error, false);
       }

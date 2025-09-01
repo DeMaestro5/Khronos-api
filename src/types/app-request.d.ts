@@ -1,31 +1,34 @@
-import { Request } from 'express';
-import Keystore from '../database/model/Keystore';
-import ApiKey from '../database/model/ApiKey';
+// src/types/app-request.d.ts
+import type { Request } from 'express';
+import type Keystore from '../database/model/Keystore';
+import type ApiKey from '../database/model/ApiKey';
+import type DBUser from '../database/model/User';
 
-declare interface PublicRequest extends Request {
+export interface PublicRequest extends Request {
   apiKey: ApiKey;
 }
 
-declare interface RoleRequest extends PublicRequest {
+export interface RoleRequest extends PublicRequest {
   currentRoleCodes: string[];
 }
 
-declare interface AppUser {
+export interface AppUser {
   id: string;
-  email: string;
-  name: string;
+  email?: string;
+  name?: string;
 }
 
-declare interface ProtectedRequest extends RoleRequest {
+export type ProtectedRequest = Omit<RoleRequest, 'user'> & {
+  user: DBUser;
   accessToken: string;
   keystore: Keystore;
   appUser: AppUser;
-}
+};
 
-declare interface Tokens {
+export interface Tokens {
   accessToken: string;
   refreshToken: string;
-  accessTokenExpiresIn: number; // seconds
-  refreshTokenExpiresIn: number; // seconds
-  isRememberMe?: boolean; // indicates if this was a remember me login
+  accessTokenExpiresIn: number;
+  refreshTokenExpiresIn: number;
+  isRememberMe?: boolean;
 }

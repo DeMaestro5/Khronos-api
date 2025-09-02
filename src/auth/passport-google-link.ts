@@ -3,6 +3,25 @@ import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { config } from '../config/index';
 
+// Validate configuration for Google Link strategy
+const validateGoogleLinkConfig = () => {
+  const { clientId, clientSecret } = config.google;
+  const { baseUrl } = config.api;
+
+  if (!clientId || !clientSecret || !baseUrl) {
+    console.error('❌ Google Link Strategy: Missing configuration', {
+      hasClientId: !!clientId,
+      hasSecret: !!clientSecret,
+      hasBaseUrl: !!baseUrl,
+    });
+    throw new Error('Google Link Strategy configuration is incomplete');
+  }
+
+  console.log('✅ Google Link Strategy Configuration Valid');
+};
+
+validateGoogleLinkConfig();
+
 export const googleLinkStrategy = new GoogleStrategy(
   {
     clientID: config.google.clientId,

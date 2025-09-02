@@ -4,6 +4,7 @@ import { SuccessResponse } from '../../core/ApiResponse';
 import { PublicRequest } from '../../types/app-request';
 import asyncHandler from '../../helpers/asyncHandler';
 import GoogleAuthService from '../../services/Auth Services/google-auth.service';
+import { config } from '../../config/index';
 
 const router = express.Router();
 
@@ -39,7 +40,7 @@ router.get(
       const profile = req.user as any;
 
       if (!profile) {
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        const frontendUrl = config.frontend.url;
         const redirectUrl = `${frontendUrl}/auth/google-callback?error=auth_failed&message=Google authentication failed`;
         return res.redirect(redirectUrl);
       }
@@ -48,12 +49,12 @@ router.get(
         await GoogleAuthService.authenticateGoogleUser(profile);
 
       // Redirect to frontend with tokens and user data
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      const frontendUrl = config.frontend.url;
       const redirectUrl = `${frontendUrl}/auth/google-callback?success=true&accessToken=${tokens.accessToken}&refreshToken=${tokens.refreshToken}&userId=${user._id}&isNewUser=${isNewUser}`;
 
       res.redirect(redirectUrl);
     } catch (error) {
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      const frontendUrl = config.frontend.url;
       const redirectUrl = `${frontendUrl}/auth/google-callback?error=auth_failed&message=${encodeURIComponent(
         error instanceof Error ? error.message : 'Authentication failed',
       )}`;

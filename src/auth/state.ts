@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 
-const STATE_SECRET = process.env.OAUTH_STATE_SECRET!;
+const STATE_SECRET = process.env.STATE_SECRET!;
 
 export function makeState(appUserId: string) {
   return jwt.sign({ uid: appUserId, t: Date.now() }, STATE_SECRET, {

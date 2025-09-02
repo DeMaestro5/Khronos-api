@@ -2,6 +2,35 @@ import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { config } from './index';
 
+// Validate Google OAuth configuration
+const validateGoogleConfig = () => {
+  const { clientId, clientSecret, callbackUrl } = config.google;
+
+  if (!clientId || clientId === 'your-google-client-id') {
+    console.error('❌ GOOGLE_CLIENT_ID is missing or not set');
+    throw new Error('Google OAuth Client ID is required');
+  }
+
+  if (!clientSecret || clientSecret === 'your-google-client-secret') {
+    console.error('❌ GOOGLE_CLIENT_SECRET is missing or not set');
+    throw new Error('Google OAuth Client Secret is required');
+  }
+
+  if (!callbackUrl) {
+    console.error('❌ GOOGLE_CALLBACK_URL is missing');
+    throw new Error('Google OAuth Callback URL is required');
+  }
+
+  console.log('✅ Google OAuth Configuration Valid:', {
+    clientId: clientId.substring(0, 10) + '...',
+    callbackUrl,
+    hasSecret: !!clientSecret,
+  });
+};
+
+// Validate configuration before creating strategy
+validateGoogleConfig();
+
 // Configure Google OAuth Strategy
 passport.use(
   new GoogleStrategy(

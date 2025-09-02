@@ -12,12 +12,35 @@ const router = express.Router();
 router.get(
   '/test',
   asyncHandler(async (req: PublicRequest, res) => {
-    new SuccessResponse('Google OAuth is configured and ready', {
-      status: 'ready',
+    // Check configuration status
+    const configStatus = {
+      hasClientId: !!(
+        config.google.clientId &&
+        config.google.clientId !== 'your-google-client-id'
+      ),
+      hasClientSecret: !!(
+        config.google.clientSecret &&
+        config.google.clientSecret !== 'your-google-client-secret'
+      ),
+      hasCallbackUrl: !!config.google.callbackUrl,
+      hasFrontendUrl: !!config.frontend.url,
+      hasApiUrl: !!config.api.baseUrl,
+    };
+
+    const isConfigured = Object.values(configStatus).every(Boolean);
+
+    new SuccessResponse('Google OAuth configuration status', {
+      status: isConfigured ? 'ready' : 'configuration_incomplete',
+      configStatus,
       endpoints: {
         login: '/api/v1/auth/google/login',
         callback: '/api/v1/auth/google/callback',
         failure: '/api/v1/auth/google/failure',
+      },
+      urls: {
+        frontend: config.frontend.url,
+        api: config.api.baseUrl,
+        callback: config.google.callbackUrl,
       },
     }).send(res);
   }),
@@ -37,23 +60,54 @@ router.get(
   passport.authenticate('google', { session: false }),
   asyncHandler(async (req: PublicRequest, res) => {
     try {
-      const profile = req.user as any;
+      const authData = req.user as any;
 
-      if (!profile) {
+      // Debug logging for production
+      console.log('🔍 Google OAuth Callback - Auth Data:', {
+        hasAuthData: !!authData,
+        hasProfile: !!authData?.profile,
+        profileId: authData?.profile?.id,
+        profileEmails: authData?.profile?.emails,
+        accessToken: authData?.accessToken ? 'present' : 'missing',
+      });
+
+      if (!authData || !authData.profile) {
+        console.log('❌ Google OAuth Failed: No auth data or profile');
         const frontendUrl = config.frontend.url;
-        const redirectUrl = `${frontendUrl}/auth/google-callback?error=auth_failed&message=Google authentication failed`;
+        const redirectUrl = `${frontendUrl}/auth/google-callback?error=auth_failed&message=No profile data received`;
         return res.redirect(redirectUrl);
       }
 
+      // Extract the actual Google profile from the auth data
+      const googleProfile = authData.profile;
+
+      // Validate required profile fields
+      if (
+        !googleProfile.id ||
+        !googleProfile.emails ||
+        !googleProfile.emails[0]?.value
+      ) {
+        console.log(
+          '❌ Google OAuth Failed: Invalid profile structure',
+          googleProfile,
+        );
+        const frontendUrl = config.frontend.url;
+        const redirectUrl = `${frontendUrl}/auth/google-callback?error=auth_failed&message=Invalid profile data`;
+        return res.redirect(redirectUrl);
+      }
+
+      console.log('✅ Google OAuth Success: Processing user authentication');
       const { user, tokens, isNewUser } =
-        await GoogleAuthService.authenticateGoogleUser(profile);
+        await GoogleAuthService.authenticateGoogleUser(googleProfile);
 
       // Redirect to frontend with tokens and user data
       const frontendUrl = config.frontend.url;
       const redirectUrl = `${frontendUrl}/auth/google-callback?success=true&accessToken=${tokens.accessToken}&refreshToken=${tokens.refreshToken}&userId=${user._id}&isNewUser=${isNewUser}`;
 
+      console.log('🎉 Google OAuth Complete: Redirecting to frontend');
       res.redirect(redirectUrl);
     } catch (error) {
+      console.error('💥 Google OAuth Error:', error);
       const frontendUrl = config.frontend.url;
       const redirectUrl = `${frontendUrl}/auth/google-callback?error=auth_failed&message=${encodeURIComponent(
         error instanceof Error ? error.message : 'Authentication failed',

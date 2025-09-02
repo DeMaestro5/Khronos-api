@@ -10,6 +10,8 @@ import { SuccessResponse } from '../../core/ApiResponse';
 import { requireUser } from '../../middleware/requireUser';
 import { makeState, readState } from '../../auth/state';
 import { Types } from 'mongoose';
+import { config } from '../../config/index';
+import '../../auth/passport-google-link';
 
 const router = express.Router();
 
@@ -18,7 +20,7 @@ router.get(
   requireUser,
   asyncHandler(async (req: express.Request, res, next) => {
     const state = makeState(req.appUser!.id);
-    passport.authenticate('google', {
+    (passport.authenticate as any)('google-link', {
       scope: [
         'openid',
         'email',
@@ -35,9 +37,9 @@ router.get(
 
 router.get(
   '/callback',
-  passport.authenticate('google', {
+  (passport.authenticate as any)('google-link', {
     session: false,
-    failureRedirect: `${process.env.FRONTEND_URL}/integrations?platform=youtube&success=0`,
+    failureRedirect: `${config.frontend.url}/integrations?platform=youtube&success=0`,
   }),
   asyncHandler(async (req: express.Request, res) => {
     const { state } = req.query as { state: string };
@@ -46,7 +48,7 @@ router.get(
       appUserId = readState(state).uid;
     } catch {
       return res.redirect(
-        `${process.env.FRONTEND_URL}/integrations?platform=youtube&success=0&reason=bad_state`,
+        `${config.frontend.url}/integrations?platform=youtube&success=0&reason=bad_state`,
       );
     }
 
@@ -64,7 +66,7 @@ router.get(
     });
 
     return res.redirect(
-      `${process.env.FRONTEND_URL}/integrations?platform=youtube&success=1`,
+      `${config.frontend.url}/integrations?platform=youtube&success=1`,
     );
   }),
 );

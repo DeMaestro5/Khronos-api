@@ -15,4 +15,10 @@ export const config = {
       process.env.GOOGLE_CALLBACK_URL ||
       'http://localhost:3000/api/v1/auth/google/callback',
   },
+  api: {
+    baseUrl: process.env.API_URL || 'http://localhost:3000',
+  },
+  frontend: {
+    url: process.env.FRONTEND_URL || 'http://localhost:3000',
+  },
 };

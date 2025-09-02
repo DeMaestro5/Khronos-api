@@ -36,10 +36,21 @@ services:
       # Add your other environment variables here
       - key: JWT_SECRET
         generateValue: true
+      - key: STATE_SECRET
+        generateValue: true
       - key: FRONTEND_URL
         value: https://your-frontend-domain.com
       - key: CORS_URL
         value: https://your-frontend-domain.com
+      - key: API_URL
+        value: https://khronos-api-bp71.onrender.com
+      # Google OAuth Configuration (Set these manually in Render Dashboard)
+      - key: GOOGLE_CLIENT_ID
+        value: your-google-client-id
+      - key: GOOGLE_CLIENT_SECRET
+        value: your-google-client-secret
+      - key: GOOGLE_CALLBACK_URL
+        value: https://khronos-api-bp71.onrender.com/api/v1/auth/google/callback
 
   # Redis Cache Service
   - type: redis

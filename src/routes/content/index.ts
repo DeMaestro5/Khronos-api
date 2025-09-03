@@ -223,7 +223,6 @@ router.post(
       analytics: {
         impressions: 0,
         reach: 0,
-        clickThroughRate: 0,
         conversionRate: 0,
         engagementRate: 0,
       },

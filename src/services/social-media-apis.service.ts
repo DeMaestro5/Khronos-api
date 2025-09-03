@@ -60,18 +60,14 @@ interface RealTimeMetrics {
     reach: number;
     impressions: number;
     engagement: number;
-    clickThroughRate: number;
-    saveRate?: number;
-    watchTime?: number;
-    liveViewers?: number;
   };
-  demographics: {
+  demographics?: {
     ageGroups: Record<string, number>;
     genders: Record<string, number>;
     locations: Record<string, number>;
     devices: Record<string, number>;
   };
-  trending: {
+  trending?: {
     isViral: boolean;
     trendingScore: number;
     hashtags: string[];
@@ -261,9 +257,6 @@ export class SocialMediaAPIService {
         reach: 0,
         impressions: 0,
         engagement: 0,
-        clickThroughRate: 0,
-        saveRate: 0,
-        watchTime: 0,
       },
       demographics: {
         ageGroups: {},
@@ -377,8 +370,6 @@ export class SocialMediaAPIService {
           impressions:
             this.extractMetricValue(response.data, 'impressions') || 0,
           engagement: this.calculateEngagement(response.data),
-          clickThroughRate: 0, // Would need additional API calls
-          saveRate: this.extractMetricValue(response.data, 'saves') || 0,
         },
         demographics: this.processDemographics(audienceResponse.data),
         trending: {
@@ -442,8 +433,6 @@ export class SocialMediaAPIService {
           reach: parseInt(stats.viewCount) || 0,
           impressions: 0, // Would need YouTube Analytics API
           engagement: this.calculateYouTubeEngagement(stats),
-          clickThroughRate: 0,
-          watchTime: 0, // Would extract from analytics
         },
         demographics: {
           ageGroups: {},
@@ -498,7 +487,6 @@ export class SocialMediaAPIService {
           reach: response.data.data?.view_count || 0,
           impressions: 0,
           engagement: this.calculateTikTokEngagement(response.data.data),
-          clickThroughRate: 0,
         },
         demographics: {
           ageGroups: {},
@@ -552,7 +540,6 @@ export class SocialMediaAPIService {
           reach: response.data.numViews || 0,
           impressions: response.data.numImpressions || 0,
           engagement: this.calculateLinkedInEngagement(response.data),
-          clickThroughRate: response.data.clickThroughRate || 0,
         },
         demographics: {
           ageGroups: {},
@@ -608,7 +595,6 @@ export class SocialMediaAPIService {
           reach: metrics.impression_count || 0,
           impressions: metrics.impression_count || 0,
           engagement: this.calculateTwitterEngagement(metrics),
-          clickThroughRate: 0,
         },
         demographics: {
           ageGroups: {},
@@ -666,8 +652,6 @@ export class SocialMediaAPIService {
           impressions:
             this.extractMetricValue(response.data, 'post_impressions') || 0,
           engagement: this.calculateFacebookEngagement(response.data),
-          clickThroughRate: 0,
-          liveViewers: 0,
         },
         demographics: {
           ageGroups: {},

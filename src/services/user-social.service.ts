@@ -25,12 +25,74 @@ export class UserSocialService {
     userId: Types.ObjectId,
     videoId: string,
   ): Promise<RealTimeMetrics> {
-    const conn = await getConnection(userId, 'youtube');
-    if (!conn?.isActive) {
+    try {
+      const conn = await getConnection(userId, 'youtube');
+
+      if (!conn?.isActive) {
+        console.log(`No active Youtube connection for user ${userId}`);
+        return this.api.getYouTubeRealTimeMetrics(videoId);
+      }
+
+      // decrypt the access token
+      const accessToken = decryptIfPresent(conn.accessTokenEncrypted);
+      if (!accessToken) {
+        console.log(
+          `No access token for Youtube connection for user ${userId}`,
+        );
+        return this.api.getYouTubeRealTimeMetrics(videoId);
+      }
+      console.log(
+        `fetching real youtube metrics for video ${videoId} using user credentials`,
+      );
+      // fetch real Youtube metrics using user's the access token
+      const response = await axios.get(
+        `https://www.googleapis.com/youtube/v3/videos`,
+        {
+          params: {
+            part: 'statistics, snippet',
+            id: videoId,
+            accessToken: accessToken,
+          },
+          timeout: 15000,
+        },
+      );
+
+      const video = response.data.items[0];
+      if (!video) {
+        console.log(`Video ${videoId} not found or not accessible`);
+        return this.api.getYouTubeRealTimeMetrics(videoId);
+      }
+
+      const stats = video.statistics;
+
+      // convert youtube data to our normalized format
+      const normalizedMetrics = this.normalize({
+        views: parseInt(stats.viewCount || '0'),
+        likes: parseInt(stats.likeCount || '0'),
+        comments: parseInt(stats.commentCount || '0'),
+        reach: parseInt(stats.viewCount || '0'),
+        impressions: parseInt(stats.viewCount || '0'),
+        //engagement will be auto calculated by normalize function
+      });
+
+      // build final metrics object
+      const realMetrics: RealTimeMetrics = {
+        contentId: videoId,
+        platform: 'youtube',
+        timestamp: new Date(),
+        metrics: normalizedMetrics.metrics,
+      };
+
+      console.log(`fetched real youtube metrics for video ${videoId}`);
+      return realMetrics;
+    } catch (error) {
+      console.error(
+        `Error fetching youtube metrics for video ${videoId}:`,
+        error,
+      );
+      //Fallback response
       return this.api.getYouTubeRealTimeMetrics(videoId);
     }
-
-    return this.api.getYouTubeRealTimeMetrics(videoId);
   }
 
   private normalize(

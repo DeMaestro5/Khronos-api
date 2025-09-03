@@ -37,7 +37,7 @@ router.get(
 
 router.get(
   '/callback',
-  (passport.authenticate as any)('google-link', {
+  passport.authenticate('google-link', {
     session: false,
     failureRedirect: `${config.frontend.url}/integrations?platform=youtube&success=0`,
   }),

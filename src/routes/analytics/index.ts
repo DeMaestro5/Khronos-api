@@ -484,8 +484,6 @@ router.post(
                       (realTimeMetrics.metrics.engagement /
                         Math.max(realTimeMetrics.metrics.reach, 1)) *
                       100,
-                    trendinessScore: realTimeMetrics.trending.trendingScore,
-                    isViral: realTimeMetrics.trending.isViral,
                     metrics: realTimeMetrics.metrics,
                   });
 
@@ -497,10 +495,10 @@ router.post(
                   contentMetrics.aggregatedMetrics.totalReach +=
                     realTimeMetrics.metrics.reach;
                   contentMetrics.aggregatedMetrics.averageTrendingScore +=
-                    realTimeMetrics.trending.trendingScore;
+                    realTimeMetrics.trending?.trendingScore;
 
                   // Enhanced alerts with orchestrator context
-                  if (realTimeMetrics.trending.isViral) {
+                  if (realTimeMetrics.trending?.isViral) {
                     enhancedRealTimeData.alerts.push({
                       type: 'viral',
                       message: `🚀 Your content "${content.title}" on ${platform} is going viral!`,

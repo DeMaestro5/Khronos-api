@@ -6,60 +6,59 @@ import axios from 'axios';
 export class TikTokPublishingService {
   async publishTikTokPost(
     userId: Types.ObjectId,
-    postData: {
-      caption: string;
-      videoUrl: string;
-      mediaType: 'image' | 'video' | 'carousel';
-    },
+    postData: { caption: string; videoUrl: string },
   ): Promise<{ success: boolean; postId?: string; error?: string }> {
     try {
-      // get user tiktok connection
       const conn = await getTiktokConnectionByUser(userId);
-      if (!conn) {
-        return { success: false, error: 'No tiktok connection found' };
-      }
+      if (!conn) return { success: false, error: 'No tiktok connection found' };
+
       const accessToken = decryptIfPresent(
         conn?.platformCredentials?.tiktok?.accessTokenEnc,
       );
-      const businessAccountId = conn?.platformCredentials?.tiktok?.openId;
-      if (!accessToken || !businessAccountId) {
+      const openId = conn?.platformCredentials?.tiktok?.openId;
+      if (!accessToken || !openId)
         return {
           success: false,
           error: 'Tiktok account not properly connected',
         };
-      }
 
-      // create media object
-      const createMediaResponse = await axios.post(
-        `https://open.tiktokapis.com/v2/media/create`,
+      // 1) INIT (get an upload URL or upload_id)
+      const initResp = await axios.post(
+        'https://open.tiktokapis.com/v2/post/publish/inbox/video/init/',
         {
-          video_url: postData.videoUrl,
-          caption: postData.caption,
-          access_token: accessToken,
+          source_info: {
+            source: 'PULL_FROM_URL',
+            video_url: postData.videoUrl,
+          },
         },
+        { headers: { Authorization: `Bearer ${accessToken}` }, timeout: 20000 },
       );
+      const uploadId = initResp?.data?.data?.upload_id;
+      if (!uploadId)
+        return { success: false, error: 'No upload_id from TikTok init' };
 
-      const creationId = createMediaResponse.data.id;
-
-      // publish media
-
-      const publishResponse = await axios.post(
-        `https://open.tiktokapis.com/v2/media/publish`,
-        {
-          creation_id: creationId,
-          access_token: accessToken,
-        },
+      // 2) PUBLISH (finalize and set caption)
+      const publishResp = await axios.post(
+        'https://open.tiktokapis.com/v2/post/publish/inbox/video/',
+        { upload_id: uploadId, text: postData.caption },
+        { headers: { Authorization: `Bearer ${accessToken}` }, timeout: 30000 },
       );
+      // Depending on API version you’ll get video_id / share_id
+      const videoId =
+        publishResp?.data?.data?.video_id ||
+        publishResp?.data?.data?.share_id ||
+        publishResp?.data?.data?.id;
 
-      const mediaId = publishResponse.data.id;
-      console.log(`Successfully publish to tiktok with ID: ${mediaId}`);
-
-      return { success: true, postId: mediaId };
+      return videoId
+        ? { success: true, postId: videoId }
+        : { success: false, error: 'No video id in TikTok publish response' };
     } catch (error: any) {
-      console.error('Tiktok publishing failed', error);
       return {
         success: false,
-        error: error.response?.data?.error?.message || error.message,
+        error:
+          error?.response?.data?.message ||
+          error?.response?.data?.error?.message ||
+          error?.message,
       };
     }
   }

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import authentication from '../../auth/authentication';
 import youtubeAuth from './youtube-auth';
+import youtubeCallbackPublic from './youtube-callback-public';
 import instagram from './instagram';
 import tiktok from './tiktok';
 import facebook from './facebook';
@@ -9,6 +10,10 @@ import twitter from './twitter';
 
 const router = Router();
 
+// Public YouTube OAuth callback (must be reachable without API key/JWT)
+router.use('/youtube', youtubeCallbackPublic);
+
+// Everything below requires app authentication
 router.use(authentication);
 
 router.use('/youtube', youtubeAuth);

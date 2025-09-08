@@ -623,8 +623,8 @@ export class AnalyticsOrchestratorService {
 
     for (const metric of metrics) {
       if (
-        metric.trending.isViral &&
-        metric.trending.trendingScore > thresholds.viralThreshold
+        metric.trending?.isViral &&
+        (metric.trending?.trendingScore ?? 0) > thresholds.viralThreshold
       ) {
         alerts.push({
           type: 'viral',

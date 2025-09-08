@@ -161,6 +161,26 @@ export default {
 
     // Legacy field for backward compatibility (will be moved to scheduling.startDate)
     scheduledDate: Joi.date().iso(),
+
+    // Optional publishing directive for immediate cross-posting
+    publish: Joi.object({
+      enabled: Joi.boolean().default(false),
+      platforms: Joi.array()
+        .items(
+          Joi.string().valid(
+            'youtube',
+            'instagram',
+            'facebook',
+            'twitter',
+            'linkedin',
+            'tiktok',
+          ),
+        )
+        .min(1),
+      mediaUrl: Joi.string().uri(),
+      mediaType: Joi.string().valid('image', 'video'),
+      linkUrl: Joi.string().uri(),
+    }).optional(),
   }),
 
   update: Joi.object({
@@ -413,5 +433,25 @@ export default {
 
     // Legacy field for backward compatibility (will be moved to scheduling.startDate)
     scheduledDate: Joi.date().iso(),
+
+    // Optional publishing directive for immediate cross-posting
+    publish: Joi.object({
+      enabled: Joi.boolean().default(false),
+      platforms: Joi.array()
+        .items(
+          Joi.string().valid(
+            'youtube',
+            'instagram',
+            'facebook',
+            'twitter',
+            'linkedin',
+            'tiktok',
+          ),
+        )
+        .min(1),
+      mediaUrl: Joi.string().uri(),
+      mediaType: Joi.string().valid('image', 'video'),
+      linkUrl: Joi.string().uri(),
+    }).optional(),
   }),
 };

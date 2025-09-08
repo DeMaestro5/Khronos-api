@@ -26,6 +26,7 @@ import trend from './trend';
 import settings from './settings';
 import cache from './cache';
 import platforms from './platforms';
+import youtubeCallbackPublic from './platforms/youtube-callback-public';
 
 const router = express.Router();
 
@@ -36,6 +37,8 @@ router.use('/auth/google', googleAuth);
 router.use('/forgot-password', forgotPassword);
 router.use('/reset-password', resetPassword);
 router.use('/token', token);
+// Public YouTube OAuth callback (must be accessible by Google without headers)
+router.use('/platforms/youtube', youtubeCallbackPublic);
 
 // Protected routes (API key required)
 router.use(apikey);

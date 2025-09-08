@@ -1,14 +1,13 @@
 import crypto from 'crypto';
-const ENCRYPTION_KEY = Buffer.from(
-  process.env.ENCRYPTION_KEY_BASE64 || '',
-  'base64',
-);
+const keyB64 = process.env.ENCRYPTION_KEY_BASE64 || '';
+const ENCRYPTION_KEY_BUF = keyB64 ? Buffer.from(keyB64, 'base64') : undefined;
 
-if (!ENCRYPTION_KEY) {
+if (!ENCRYPTION_KEY_BUF || ENCRYPTION_KEY_BUF.length !== 32) {
   throw new Error(
-    'TOKEN_ENCRYPTION_KEY_BASE64 (32 bytes) is not set or must be base64',
+    'ENCRYPTION_KEY_BASE64 must be a base64-encoded 32-byte key (e.g. openssl rand -base64 32)',
   );
 }
+const ENCRYPTION_KEY: Buffer = ENCRYPTION_KEY_BUF;
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 12;
 

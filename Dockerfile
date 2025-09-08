@@ -16,8 +16,11 @@ COPY --chown=node:node . .
 # installing all dependencies (including dev deps for TypeScript compilation)
 RUN npm ci
 
-# build the TypeScript application with memory optimization
-RUN NODE_OPTIONS='--max-old-space-size=1024' npm run build:render
+# Increase Node heap during build to avoid OOM on Render builders
+ENV NODE_OPTIONS=--max-old-space-size=2048
+
+# build the TypeScript application
+RUN npm run build:render
 
 # container exposed network port number
 EXPOSE 3000

@@ -303,8 +303,9 @@ export class RealTimeWebSocketService {
 
     // Check viral threshold
     if (
-      metrics.trending.isViral &&
-      metrics.trending.trendingScore > alertConfig.triggers.viralThreshold
+      metrics.trending?.isViral &&
+      (metrics.trending?.trendingScore ?? 0) >
+        alertConfig.triggers.viralThreshold
     ) {
       alerts.push({
         type: 'viral',
@@ -313,7 +314,7 @@ export class RealTimeWebSocketService {
         metrics: {
           views: metrics.metrics.views,
           engagement: metrics.metrics.engagement,
-          trendingScore: metrics.trending.trendingScore,
+          trendingScore: metrics.trending?.trendingScore ?? 0,
         },
       });
     }

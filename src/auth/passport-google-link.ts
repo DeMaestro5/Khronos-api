@@ -22,11 +22,21 @@ const validateGoogleLinkConfig = () => {
 
 validateGoogleLinkConfig();
 
+// Derive effective callback URL. For localhost, force HTTP to avoid SSL errors.
+const rawApiBaseUrl = config.api.baseUrl;
+const effectiveApiBaseUrl = rawApiBaseUrl.startsWith('https://localhost')
+  ? rawApiBaseUrl.replace('https://', 'http://')
+  : rawApiBaseUrl;
+const effectiveCallbackUrl = `${effectiveApiBaseUrl}/api/v1/platforms/youtube/callback`;
+
+console.log('Google Link Raw API_URL:', rawApiBaseUrl);
+console.log('Google Link Callback URL:', effectiveCallbackUrl);
+
 export const googleLinkStrategy = new GoogleStrategy(
   {
     clientID: config.google.clientId,
     clientSecret: config.google.clientSecret,
-    callbackURL: `${config.api.baseUrl}/api/v1/platforms/youtube/callback`,
+    callbackURL: effectiveCallbackUrl,
     passReqToCallback: true,
   },
   async (req, accessToken, refreshToken, profile, done) => {

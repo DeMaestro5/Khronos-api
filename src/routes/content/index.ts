@@ -14,11 +14,13 @@ import RAGService from '../../services/RAG-service';
 import { ContentCalendarService } from '../../services/content-calendar.service';
 import aiSuggestRouter from './ai-suggest';
 import { UserCache } from '../../cache/repository/UserCache';
+import { PlatformPublishingService } from '../../services/platform-publishing.service';
 
 const router = Router();
 
 const contentService = new ContentService();
 const contentCalendarService = new ContentCalendarService();
+const platformPublishingService = new PlatformPublishingService();
 
 router.use(authentication);
 
@@ -61,6 +63,7 @@ router.post(
       tags,
       scheduling,
       scheduledDate,
+      publish,
     } = req.body;
 
     // Generate comprehensive content ideas if not provided
@@ -228,6 +231,52 @@ router.post(
       },
     } as any);
 
+    // Optional immediate cross-platform publishing
+    let publishingResults: any = undefined;
+    let platformPostIds: Record<string, string> | undefined = undefined;
+    if (publish?.enabled) {
+      try {
+        const supportedPlatforms = [
+          'youtube',
+          'instagram',
+          'facebook',
+          'twitter',
+          'linkedin',
+          'tiktok',
+        ];
+        const targetPlatforms = (publish.platforms || platform).filter(
+          (p: string) => supportedPlatforms.includes(p),
+        );
+        if (targetPlatforms.length > 0) {
+          const contentData = {
+            title,
+            description: primaryContent,
+            mediaUrl: publish.mediaUrl,
+            mediaType: publish.mediaType,
+            linkUrl: publish.linkUrl,
+            tags,
+          } as any;
+          const { results, platformPostIds: ids } =
+            await platformPublishingService.publishToMultiplePlatforms(
+              req.user._id,
+              targetPlatforms as any,
+              contentData,
+            );
+          publishingResults = results;
+          platformPostIds = ids;
+          if (platformPostIds && Object.keys(platformPostIds).length > 0) {
+            await ContentRepo.update({
+              ...content,
+              platformPostIds,
+            } as any);
+            (content as any).platformPostIds = platformPostIds;
+          }
+        }
+      } catch (error) {
+        console.error('Publishing failed:', error);
+      }
+    }
+
     // 🚀 AUTOMATIC CALENDAR EVENT CREATION
     let calendarEvents: any[] = [];
     if (contentScheduling) {
@@ -252,6 +301,8 @@ router.post(
     // Create comprehensive response
     const responseData = {
       content,
+      ...(platformPostIds && { platformPostIds }),
+      ...(publishingResults && { publishing: { results: publishingResults } }),
       calendarEvents, // Include created calendar events in response
       contentIdeas: (contentIdeas || []).length > 0 ? contentIdeas : undefined,
       optimizedContent:

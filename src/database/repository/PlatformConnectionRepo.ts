@@ -41,6 +41,16 @@ async function upsertConnection(
       isActive: true,
       lastSyncAt: new Date(),
       connectAt: new Date(),
+      ...(platform === 'youtube'
+        ? {
+            platformCredentials: {
+              youtube: {
+                channelId: payload.accountId || '',
+                accessTokenEnc: accessTokenEnc,
+              },
+            },
+          }
+        : {}),
     },
     {
       upsert: true,
@@ -69,6 +79,15 @@ async function getPlatformCredentials(
     connectAt: doc.connectAt,
   };
 
+  // Always include top-level tokens as base values
+  if (doc.accessTokenEncrypted) {
+    result.accessTokenEnc = decrypt(doc.accessTokenEncrypted);
+  }
+  if (doc.refreshTokenEncrypted) {
+    result.refreshTokenEnc = decrypt(doc.refreshTokenEncrypted);
+  }
+
+  // Override with platform-specific credentials when present
   if (doc.platformCredentials) {
     switch (platform) {
       case 'instagram':
@@ -77,14 +96,14 @@ async function getPlatformCredentials(
         result.igUserAccessToken = doc.platformCredentials.instagram
           ?.igUserAccessTokenEnc
           ? decrypt(doc.platformCredentials.instagram.igUserAccessTokenEnc)
-          : undefined;
+          : result.igUserAccessToken;
         break;
       case 'facebook':
         result.pageId = doc.platformCredentials.facebook?.pageId;
         result.pageAccessToken = doc.platformCredentials.facebook
           ?.pageAccessTokenEnc
           ? decrypt(doc.platformCredentials.facebook.pageAccessTokenEnc)
-          : undefined;
+          : result.pageAccessToken;
         break;
       case 'linkedin':
         result.memberUrn = doc.platformCredentials.linkedin?.memberUrn;
@@ -92,34 +111,33 @@ async function getPlatformCredentials(
           doc.platformCredentials.linkedin?.organizationUrn;
         result.accessTokenEnc = doc.platformCredentials.linkedin?.accessTokenEnc
           ? decrypt(doc.platformCredentials.linkedin.accessTokenEnc)
-          : undefined;
+          : result.accessTokenEnc;
         break;
       case 'tiktok':
         result.openId = doc.platformCredentials.tiktok?.openId;
         result.accessTokenEnc = doc.platformCredentials.tiktok?.accessTokenEnc
           ? decrypt(doc.platformCredentials.tiktok.accessTokenEnc)
-          : undefined;
+          : result.accessTokenEnc;
         break;
-      case 'youtube':
-        result.channelId = doc.platformCredentials.youtube?.channelId;
-        result.accessTokenEnc = doc.platformCredentials.youtube?.accessTokenEnc
-          ? decrypt(doc.platformCredentials.youtube.accessTokenEnc)
-          : undefined;
+      case 'youtube': {
+        const platformAccessTokenEnc =
+          doc.platformCredentials.youtube?.accessTokenEnc;
+        const platformChannelId = doc.platformCredentials.youtube?.channelId;
+        result.channelId = platformChannelId || result.accountId;
+        result.accessTokenEnc = platformAccessTokenEnc
+          ? decrypt(platformAccessTokenEnc)
+          : result.accessTokenEnc;
         break;
+      }
       case 'twitter':
         result.userId = doc.platformCredentials.twitter?.userId;
         result.screenName = doc.platformCredentials.twitter?.screenName;
         result.accessTokenEnc = doc.platformCredentials.twitter?.accessTokenEnc
           ? decrypt(doc.platformCredentials.twitter.accessTokenEnc)
-          : undefined;
+          : result.accessTokenEnc;
         break;
       default:
-        result.accessTokenEnc = doc.accessTokenEncrypted
-          ? decrypt(doc.accessTokenEncrypted)
-          : undefined;
-        result.refreshTokenEnc = doc.refreshTokenEncrypted
-          ? decrypt(doc.refreshTokenEncrypted)
-          : undefined;
+      // keep top-level tokens already set
     }
   }
   return result;

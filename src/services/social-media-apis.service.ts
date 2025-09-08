@@ -60,6 +60,9 @@ interface RealTimeMetrics {
     reach: number;
     impressions: number;
     engagement: number;
+    clickThroughRate?: number;
+    saveRate?: number;
+    watchTime?: number;
   };
   demographics?: {
     ageGroups: Record<string, number>;

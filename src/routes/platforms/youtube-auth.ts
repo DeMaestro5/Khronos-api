@@ -46,19 +46,44 @@ router.delete(
   }),
 );
 
+// youtube status route
 router.get(
   '/status',
   requireUser,
-  asyncHandler(async (req: ProtectedRequest, res) => {
-    const creds = await getPlatformCredentials(
-      new Types.ObjectId(req.appUser!.id),
-      'youtube',
-    );
+  asyncHandler(async (req, res) => {
+    const userId = req.appUser?.id;
+    // 1) Guard: no user
+    if (!userId) {
+      return new SuccessResponse('YouTube connection status', {
+        connected: false,
+      }).send(res);
+    }
+    // 2) Guard: invalid ObjectId → treat as disconnected instead of throwing
+    if (!Types.ObjectId.isValid(userId)) {
+      return new SuccessResponse('YouTube connection status', {
+        connected: false,
+      }).send(res);
+    }
+
+    // 3) Repo call in try/catch so any DB error doesn’t bubble as 500
+    let creds: Awaited<ReturnType<typeof getPlatformCredentials>> | null = null;
+    try {
+      creds = await getPlatformCredentials(
+        new Types.ObjectId(userId),
+        'youtube',
+      );
+    } catch (e) {
+      // Optional: log server-side and return a safe shape to the client
+      return new SuccessResponse('YouTube connection status', {
+        connected: false,
+      }).send(res);
+    }
+
     const connected = !!(
       creds &&
       (creds.accessTokenEnc || creds.refreshTokenEnc)
     );
-    new SuccessResponse('YouTube connection status', {
+    return new SuccessResponse('YouTube connection status', {
       connected,
       hasAccessToken: !!creds?.accessTokenEnc,
       hasRefreshToken: !!creds?.refreshTokenEnc,

@@ -3,7 +3,7 @@ import passport from 'passport';
 import asyncHandler from '../../helpers/asyncHandler';
 
 import { deactivate } from '../../database/repository/PlatformConnectionRepo';
-import { SuccessResponse } from '../../core/ApiResponse';
+import { BadRequestResponse, SuccessResponse } from '../../core/ApiResponse';
 import { requireUser } from '../../middleware/requireUser';
 import { makeState } from '../../auth/state';
 
@@ -51,18 +51,14 @@ router.get(
   '/status',
   requireUser,
   asyncHandler(async (req, res) => {
-    const userId = req.appUser?.id;
+    const userId = req.appUser!.id;
     // 1) Guard: no user
     if (!userId) {
-      return new SuccessResponse('YouTube connection status', {
-        connected: false,
-      }).send(res);
+      return new BadRequestResponse('User not found');
     }
     // 2) Guard: invalid ObjectId → treat as disconnected instead of throwing
     if (!Types.ObjectId.isValid(userId)) {
-      return new SuccessResponse('YouTube connection status', {
-        connected: false,
-      }).send(res);
+      return new BadRequestResponse('Invalid user id');
     }
 
     // 3) Repo call in try/catch so any DB error doesn’t bubble as 500
@@ -74,9 +70,7 @@ router.get(
       );
     } catch (e) {
       // Optional: log server-side and return a safe shape to the client
-      return new SuccessResponse('YouTube connection status', {
-        connected: false,
-      }).send(res);
+      return new BadRequestResponse('Error getting platform credentials');
     }
 
     const connected = !!(

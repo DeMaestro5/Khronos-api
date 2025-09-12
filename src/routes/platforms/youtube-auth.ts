@@ -6,16 +6,18 @@ import { deactivate } from '../../database/repository/PlatformConnectionRepo';
 import { SuccessResponse } from '../../core/ApiResponse';
 import { requireUser } from '../../middleware/requireUser';
 import { makeState } from '../../auth/state';
+
 import { Types } from 'mongoose';
 import '../../auth/passport-google-link';
 import { getPlatformCredentials } from '../../database/repository/PlatformConnectionRepo';
+import { ProtectedRequest } from '../../types/app-request';
 
 const router = express.Router();
 
 router.get(
   '/connect',
   requireUser,
-  asyncHandler(async (req: express.Request, res, next) => {
+  asyncHandler(async (req: ProtectedRequest, res, next) => {
     const state = makeState(req.appUser!.id);
     (passport.authenticate as any)('google-link', {
       scope: [
@@ -36,7 +38,7 @@ router.get(
 router.delete(
   '/disconnect',
   requireUser,
-  asyncHandler(async (req: express.Request, res) => {
+  asyncHandler(async (req: ProtectedRequest, res) => {
     await deactivate(new Types.ObjectId(req.appUser!.id), 'youtube');
     new SuccessResponse('Youtube disconnected successfully', {
       platform: 'youtube',
@@ -47,7 +49,7 @@ router.delete(
 router.get(
   '/status',
   requireUser,
-  asyncHandler(async (req: express.Request, res) => {
+  asyncHandler(async (req: ProtectedRequest, res) => {
     const creds = await getPlatformCredentials(
       new Types.ObjectId(req.appUser!.id),
       'youtube',

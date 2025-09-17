@@ -1,4 +1,3 @@
-// src/middleware/requireUser.ts
 import JWT from '../core/JWT';
 import { getAccessToken, validateTokenData } from '../auth/authUtils';
 

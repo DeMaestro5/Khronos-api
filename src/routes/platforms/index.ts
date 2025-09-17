@@ -7,11 +7,13 @@ import tiktok from './tiktok';
 import facebook from './facebook';
 import linkedin from './linkedin';
 import twitter from './twitter';
+import diagnostics from './diagnostics';
 
 const router = Router();
 
 // Public YouTube OAuth callback (must be reachable without API key/JWT)
 router.use('/youtube', youtubeCallbackPublic);
+router.use('/diagnostics', diagnostics);
 
 // Everything below requires app authentication
 router.use(authentication);

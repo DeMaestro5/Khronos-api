@@ -54,11 +54,11 @@ router.get(
     const userId = req.appUser!.id;
     // 1) Guard: no user
     if (!userId) {
-      return new BadRequestResponse('User not found');
+      return new BadRequestResponse('User not found').send(res);
     }
     // 2) Guard: invalid ObjectId → treat as disconnected instead of throwing
     if (!Types.ObjectId.isValid(userId)) {
-      return new BadRequestResponse('Invalid user id');
+      return new BadRequestResponse('Invalid user id').send(res);
     }
 
     // 3) Repo call in try/catch so any DB error doesn’t bubble as 500
@@ -70,7 +70,9 @@ router.get(
       );
     } catch (e) {
       // Optional: log server-side and return a safe shape to the client
-      return new BadRequestResponse('Error getting platform credentials');
+      return new BadRequestResponse('Error getting platform credentials').send(
+        res,
+      );
     }
 
     const connected = !!(
@@ -79,6 +81,7 @@ router.get(
     );
     return new SuccessResponse('YouTube connection status', {
       connected,
+      isConnected: connected,
       hasAccessToken: !!creds?.accessTokenEnc,
       hasRefreshToken: !!creds?.refreshTokenEnc,
       channelId: creds?.channelId,
